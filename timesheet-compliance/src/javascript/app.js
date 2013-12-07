@@ -163,10 +163,12 @@ Ext.define('CustomApp', {
             listeners: {
                 scope: this,
                 load: function(store,records){
+                    var me = this;
                     this.logger.log(team_member.get('UserName'),records);
                     var hours = 0;
                     Ext.Array.each(records,function(record){
                         var value = record.get('Hours') || 0;
+                        me.logger.log(team_member.get('UserName'),value);
                         hours += value;
                     });
                     team_member.set('TotalHours',hours);
@@ -251,7 +253,7 @@ Ext.define('CustomApp', {
         }
         
         if ( compliance == "compliant" ) {
-            value = "";
+            // value = "";
             color = white;
         }
         

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Timesheet Compliance</title>
+    <title>Timesheet Report</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Sat Dec 07 2013 14:55:46 GMT-0800 (PST) -->
+    <!--  Build Date: Sat Dec 07 2013 15:11:40 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sat Dec 07 2013 14:55:46 GMT-0800 (PST)";
-        var CHECKSUM = 6813200284;
+        var APP_BUILD_DATE = "Sat Dec 07 2013 15:11:40 GMT-0800 (PST)";
+        var CHECKSUM = 3902961447;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -153,64 +153,19 @@ Ext.define('CustomApp', {
         var me = this;
         this.logger.log("Launched with context: ",this.getContext());
         
-        this.team_store = Ext.create('Rally.data.custom.Store',{
-            data: [{'DisplayName':'Loading','UserName':'', 'ObjectID':-1}]
+        this.time_store = Ext.create('Rally.data.custom.Store',{
+            data: [{
+                'DisplayName':'Loading',
+                'UserName':'', 'ObjectID':-1,
+                "Category":"",
+                "Department":"",
+                "ResourcePool":""
+            }]
         });
         
         this._getTeamMembers(this.getContext().getProject().ObjectID).then({
             success: function(records){
                 me._addDateSelector();
-                me._addCheckboxes();
-            }
-        });
-    },
-    _addCheckboxes: function() {
-        this.down('#select_checks_box').add({
-            xtype:'rallycheckboxfield',
-            itemId:'check_missing',
-            labelWidth: 150,
-            labelAlign: 'right',
-            fieldLabel:'Show Missing Timesheets',
-            value: true,
-            listeners: {
-                scope: this,
-                change: this._applyFilter
-            }
-        });
-        this.down('#select_checks_box').add({
-            xtype:'rallycheckboxfield',
-            itemId:'check_low',
-            labelWidth: 125,
-            labelAlign: 'right',
-            fieldLabel:'Show Below 37.5',
-            value: true,
-            listeners: {
-                scope: this,
-                change: this._applyFilter
-            }
-        });
-        this.down('#select_checks_box').add({
-            xtype:'rallycheckboxfield',
-            itemId:'check_high',
-            labelWidth: 125,
-            labelAlign: 'right',
-            fieldLabel:'Show Above 67.5',
-            value: true,
-            listeners: {
-                scope: this,
-                change: this._applyFilter
-            }
-        });
-        this.down('#select_checks_box').add({
-            xtype:'rallycheckboxfield',
-            itemId:'check_middle',
-            labelWidth: 125,
-            labelAlign: 'right',
-            fieldLabel:'Show Compliant',
-            value: true,
-            listeners: {
-                scope: this,
-                change: this._applyFilter
             }
         });
     },
@@ -221,7 +176,6 @@ Ext.define('CustomApp', {
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
-                    this.logger.log(new_value);
                     var week_start = this._getBeginningOfWeek(new_value);
                     if ( week_start !== new_value ) {
                         dp.setValue(week_start);
@@ -248,19 +202,21 @@ Ext.define('CustomApp', {
             listeners: {
                 scope: this,
                 load: function(store,records){
-                    this.team_store.removeAll();
-                    this.logger.log(records);
+                    this.time_store.removeAll();
                     Ext.Array.each(records, function(project){
                         project.getCollection('TeamMembers').load({
                             scope: this,
-                            fetch: ['DisplayName','UserName','ObjectID'],
+                            fetch: ['DisplayName','UserName','ObjectID','c_Category','Department','ResourcePool'],
                             callback: function(users, operation, success) {
                                 Ext.Array.each(users, function(user) {
-                                    me.logger.log(user.get('DisplayName'));
-                                    me.team_store.add({
+                                    me.logger.log(user.get('DisplayName'), user);
+                                    me.time_store.add({
                                         "DisplayName":user.get("DisplayName"), 
                                         "UserName":user.get("UserName"),
-                                        "ObjectID":user.get("ObjectID")
+                                        "ObjectID":user.get("ObjectID"),
+                                        "Category":user.get('c_Category'),
+                                        "Department":user.get('Department'),
+                                        "ResourcePool":user.get('ResourcePool')
                                     });
                                 });
                                 deferred.resolve([]);
@@ -276,12 +232,11 @@ Ext.define('CustomApp', {
     },
     _getTimesheets: function(week_start) {
         this.logger.log("_getTimesheets",week_start);
-        this.team_store.clearFilter();
-        var number_of_team_members = this.team_store.getCount();
+        this.time_store.clearFilter();
+        var number_of_team_members = this.time_store.getCount();
         for ( var i=0;i<number_of_team_members;i++ ) {
-            var team_member = this.team_store.getAt(i);
+            var team_member = this.time_store.getAt(i);
             team_member.set('TotalHours',-1);
-            team_member.set('Compliance',"waiting");
             this._getTimesheetForTeamMember(week_start,team_member);
         }
     },
@@ -301,108 +256,38 @@ Ext.define('CustomApp', {
             listeners: {
                 scope: this,
                 load: function(store,records){
-                    var me = this;
-                    this.logger.log(team_member.get('UserName'),records);
+                    //this.logger.log(team_member.get('UserName'),records);
                     var hours = 0;
                     Ext.Array.each(records,function(record){
                         var value = record.get('Hours') || 0;
-                        me.logger.log(team_member.get('UserName'),value);
                         hours += value;
                     });
                     team_member.set('TotalHours',hours);
-                    team_member.set('Compliance',this._getComplianceFromHours(hours));
-                    this._applyFilter();
                 }
             }
         });
     },
-    _applyFilter: function() {
-        this.logger.log("Applying Filters");
-        this.team_store.clearFilter();
-        this.team_store.filterBy(function(record,id){
-            if ( record.get('Hours') === -1 ) {
-                return true;
-            }
-            if ( this.down('#check_missing').getValue() && record.get('Compliance') === 'No Timesheet') {
-                return true;
-            }
-            if ( this.down('#check_low').getValue() && record.get('Compliance') === 'Too Low' ) {
-                return true;
-            }
-            if ( this.down('#check_high').getValue() && record.get('Compliance') === 'Too High' ) {
-                return true;
-            }
-            if ( this.down('#check_middle').getValue() && record.get('Compliance') === 'compliant' ) {
-                return true;
-            }
-            return false;
-        },this);
-    },
-    _getComplianceFromHours: function(hours){
-        if ( hours === 0 ) {
-            return "No Timesheet";
-        }
-        if ( hours < 37.5 ) {
-            return "Too Low";
-        }
-        if ( hours > 67.5 ) {
-            return "Too High";
-        }
-        
-        return "compliant";
-    },
-    _makeGrid: function() {
-        var color_renderer = this._renderColor;
-        
+    _makeGrid: function() {        
         var grid = this.down('#grid_box').add({
             xtype:'rallygrid',
-            store: this.team_store,
+            store: this.time_store,
             enableEditing: false,
             sortableColumns: false,
             columnCfgs:[ 
                 { text:'Name',dataIndex:'DisplayName', flex: 1},
                 { text:'User Name',dataIndex:'UserName',flex:1},
-                { text:'Hours',dataIndex:'TotalHours', renderer: color_renderer },
-                { text:'Compliance',dataIndex:'Compliance', renderer: color_renderer}
+                { text:"Category",dataIndex:'Category'},
+                { text:"Department",dataIndex:'Department'},
+                { text:"ResourcePool",dataIndex:'ResourcePool'}
             ]
         });
         
-    },
-    _renderColor: function(value,metaData,record) {
-        var compliance = record.get('Compliance');
-        var white = "#ffffff";
-        var red = '#ff9999';
-        var yellow = '#ffffcc';
-        var orange ='#FF9933';
-        var grey = '#D0D0D0';
-        var color = grey;
-        
-        if ( value > -1 ) {
-            color = white;
-        }
-        if ( compliance == "No Timesheet" ) {
-            color = red;
-        }
-        if ( compliance == "Too Low" ) {
-            color = yellow;
-        }
-        if ( compliance == "Too High" ) {
-            color = orange;
-        }
-        
-        if ( compliance == "compliant" ) {
-            // value = "";
-            color = white;
-        }
-        
-        metaData.style = "background-color: " + color;
-        return value;
     }
 });
 
             
                Rally.launchApp('CustomApp', {
-                   name: 'Timesheet Compliance'
+                   name: 'Timesheet Report'
                });
         });
     </script>
