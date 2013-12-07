@@ -5,11 +5,12 @@ Ext.define('CustomApp', {
     logger: new Rally.technicalservices.Logger(),
     defaults: { padding: 5, margin: 5 },
     items: [
-        {xtype:'container',itemId:'selector_box'},
+        {xtype:'container',itemId:'date_selector_box'}, 
+        {xtype:'container',itemId:'select_checks_box', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }},
         {xtype:'container',itemId:'grid_box'},
         {xtype:'tsinfolink'}
     ],
-
+    
     launch: function() {
         var me = this;
         this.logger.log("Launched with context: ",this.getContext());
@@ -21,11 +22,62 @@ Ext.define('CustomApp', {
         this._getTeamMembers(this.getContext().getProject().ObjectID).then({
             success: function(records){
                 me._addDateSelector();
+                me._addCheckboxes();
+            }
+        });
+    },
+    _addCheckboxes: function() {
+        this.down('#select_checks_box').add({
+            xtype:'rallycheckboxfield',
+            itemId:'check_missing',
+            labelWidth: 150,
+            labelAlign: 'right',
+            fieldLabel:'Show Missing Timesheets',
+            value: true,
+            listeners: {
+                scope: this,
+                change: this._applyFilter
+            }
+        });
+        this.down('#select_checks_box').add({
+            xtype:'rallycheckboxfield',
+            itemId:'check_low',
+            labelWidth: 125,
+            labelAlign: 'right',
+            fieldLabel:'Show Below 37.5',
+            value: true,
+            listeners: {
+                scope: this,
+                change: this._applyFilter
+            }
+        });
+        this.down('#select_checks_box').add({
+            xtype:'rallycheckboxfield',
+            itemId:'check_high',
+            labelWidth: 125,
+            labelAlign: 'right',
+            fieldLabel:'Show Above 67.5',
+            value: true,
+            listeners: {
+                scope: this,
+                change: this._applyFilter
+            }
+        });
+        this.down('#select_checks_box').add({
+            xtype:'rallycheckboxfield',
+            itemId:'check_middle',
+            labelWidth: 125,
+            labelAlign: 'right',
+            fieldLabel:'Show Compliant',
+            value: true,
+            listeners: {
+                scope: this,
+                change: this._applyFilter
             }
         });
     },
     _addDateSelector: function() {
-        var selector = this.down('#selector_box').add({
+        var selector = this.down('#date_selector_box').add({
             xtype:'rallydatefield',
             fieldLabel: 'Week beginning',
             listeners: {
@@ -86,6 +138,7 @@ Ext.define('CustomApp', {
     },
     _getTimesheets: function(week_start) {
         this.logger.log("_getTimesheets",week_start);
+        this.team_store.clearFilter();
         var number_of_team_members = this.team_store.getCount();
         for ( var i=0;i<number_of_team_members;i++ ) {
             var team_member = this.team_store.getAt(i);
@@ -118,9 +171,32 @@ Ext.define('CustomApp', {
                     });
                     team_member.set('TotalHours',hours);
                     team_member.set('Compliance',this._getComplianceFromHours(hours));
+                    this._applyFilter();
                 }
             }
         });
+    },
+    _applyFilter: function() {
+        this.logger.log("Applying Filters");
+        this.team_store.clearFilter();
+        this.team_store.filterBy(function(record,id){
+            if ( record.get('Hours') === -1 ) {
+                return true;
+            }
+            if ( this.down('#check_missing').getValue() && record.get('Compliance') === 'No Timesheet') {
+                return true;
+            }
+            if ( this.down('#check_low').getValue() && record.get('Compliance') === 'Too Low' ) {
+                return true;
+            }
+            if ( this.down('#check_high').getValue() && record.get('Compliance') === 'Too High' ) {
+                return true;
+            }
+            if ( this.down('#check_middle').getValue() && record.get('Compliance') === 'compliant' ) {
+                return true;
+            }
+            return false;
+        },this);
     },
     _getComplianceFromHours: function(hours){
         if ( hours === 0 ) {
@@ -133,12 +209,12 @@ Ext.define('CustomApp', {
             return "Too High";
         }
         
-        return "";
+        return "compliant";
     },
     _makeGrid: function() {
         var color_renderer = this._renderColor;
         
-        this.down('#grid_box').add({
+        var grid = this.down('#grid_box').add({
             xtype:'rallygrid',
             store: this.team_store,
             enableEditing: false,
@@ -150,6 +226,7 @@ Ext.define('CustomApp', {
                 { text:'Compliance',dataIndex:'Compliance', renderer: color_renderer}
             ]
         });
+        
     },
     _renderColor: function(value,metaData,record) {
         var compliance = record.get('Compliance');
@@ -171,6 +248,11 @@ Ext.define('CustomApp', {
         }
         if ( compliance == "Too High" ) {
             color = orange;
+        }
+        
+        if ( compliance == "compliant" ) {
+            value = "";
+            color = white;
         }
         
         metaData.style = "background-color: " + color;
