@@ -37,14 +37,15 @@ Ext.define('CustomApp', {
         this._getTeamMembers(this.getContext().getProject().ObjectID).then({
             success: function(records){
                 me.team_members = records;
-                me._addDateSelector();
+                me._addDateSelectors();
             }
         });
     },
-    _addDateSelector: function() {
-        var selector = this.down('#date_selector_box').add({
+    _addDateSelectors: function() {
+        var start_selector = this.down('#date_selector_box').add({
             xtype:'rallydatefield',
-            fieldLabel: 'Week beginning',
+            itemId:'start_date_selector',
+            fieldLabel: 'Include weeks from:',
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
@@ -53,12 +54,30 @@ Ext.define('CustomApp', {
                         dp.setValue(week_start);
                     }
                     if ( new_value.getDay() === 0 ) {
-                        this._getTimesheets(new_value);
+                        this._getTimesheets();
                     }
                 }
             }
         });
-        selector.setValue(new Date());
+        var end_selector = this.down('#date_selector_box').add({
+            xtype:'rallydatefield',
+            itemId:'end_date_selector',
+            fieldLabel: 'to:',
+            listeners: {
+                scope: this,
+                change: function(dp, new_value) {
+                    var week_start = this._getBeginningOfWeek(new_value);
+                    if ( week_start !== new_value ) {
+                        dp.setValue(week_start);
+                    }
+                    if ( new_value.getDay() === 0 ) {
+                        this._getTimesheets();
+                    }
+                }
+            }
+        });
+        start_selector.setValue(new Date());
+        end_selector.setValue(new Date());
     },
     _getBeginningOfWeek: function(js_date){
         var start_of_week_here = Ext.Date.add(js_date, Ext.Date.DAY, -1 * js_date.getDay());
@@ -80,7 +99,6 @@ Ext.define('CustomApp', {
                             scope: this,
                             fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
                             callback: function(users, operation, success) {
-                                console.log('here');
                                 deferred.resolve(users);
                             }
                         });
@@ -92,16 +110,45 @@ Ext.define('CustomApp', {
         this._makeGrid();
         return deferred.promise;
     },
-    _getTimesheets: function(week_start) {
-        this.logger.log("_getTimesheets",week_start);
+    _getTimeRange: function() {
+        this.logger.log("_getTimeRange");
+        var start_selector = this.down('#start_date_selector');
+        var end_selector = this.down('#end_date_selector');
+        
+        if ( ! end_selector || ! start_selector ) {
+            return [];
+        }
+        
+        var start = start_selector.getValue();
+        var end = end_selector.getValue();
+        
+        this.logger.log(start,end);
+        
+        if ( ! start || ! end ) {
+            return [];
+        }
+        
+        if ( start > end ) { 
+            start_selector.setValue(end);
+            return [];
+        }
+        
+        return [start,end];
+    },
+    _getTimesheets: function() {
+        this.logger.log("_getTimesheets");
+        var start_end = this._getTimeRange();
+        
         this.time_store.clearFilter();
         this.time_store.removeAll();
         
         var number_of_team_members = this.team_members.length;
         
-        for ( var i=0;i<number_of_team_members;i++ ) {
-            var team_member = this.team_members[i];
-            this._getTimesheetForTeamMember(week_start,team_member);
+        for ( var w=0;w<start_end.length;w++ ) {
+            for ( var i=0;i<number_of_team_members;i++ ) {
+                var team_member = this.team_members[i];
+                this._getTimesheetForTeamMember(start_end[w],team_member);
+            }
         }
     },
     _getTimesheetForTeamMember: function(week_start,team_member) {
