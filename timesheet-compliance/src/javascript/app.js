@@ -5,7 +5,10 @@ Ext.define('CustomApp', {
     logger: new Rally.technicalservices.Logger(),
     defaults: { padding: 5, margin: 5 },
     items: [
-        {xtype:'container',itemId:'date_selector_box'}, 
+        {xtype:'container', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }, items:[
+            {xtype:'container',itemId:'date_selector_box'}, 
+            {xtype:'container',itemId:'save_button_box'}
+        ]},
         {xtype:'container',itemId:'select_checks_box', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }},
         {xtype:'container',itemId:'grid_box'},
         {xtype:'tsinfolink'}
@@ -25,6 +28,17 @@ Ext.define('CustomApp', {
                 me._addCheckboxes();
             }
         });
+    },
+    _addDownloadButton: function() {
+        this.down('#save_button_box').add({
+            xtype:'rallybutton',
+            text:'save',
+            scope: this,
+            handler: function() {
+                this._makeCSV();
+            }
+        });
+        
     },
     _addCheckboxes: function() {
         this.down('#select_checks_box').add({
@@ -83,7 +97,6 @@ Ext.define('CustomApp', {
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
-                    this.logger.log(new_value);
                     var week_start = this._getBeginningOfWeek(new_value);
                     if ( week_start !== new_value ) {
                         dp.setValue(week_start);
@@ -111,14 +124,12 @@ Ext.define('CustomApp', {
                 scope: this,
                 load: function(store,records){
                     this.team_store.removeAll();
-                    this.logger.log(records);
                     Ext.Array.each(records, function(project){
                         project.getCollection('TeamMembers').load({
                             scope: this,
                             fetch: ['DisplayName','UserName','ObjectID'],
                             callback: function(users, operation, success) {
                                 Ext.Array.each(users, function(user) {
-                                    me.logger.log(user.get('DisplayName'));
                                     me.team_store.add({
                                         "DisplayName":user.get("DisplayName"), 
                                         "UserName":user.get("UserName"),
@@ -164,11 +175,9 @@ Ext.define('CustomApp', {
                 scope: this,
                 load: function(store,records){
                     var me = this;
-                    this.logger.log(team_member.get('UserName'),records);
                     var hours = 0;
                     Ext.Array.each(records,function(record){
                         var value = record.get('Hours') || 0;
-                        me.logger.log(team_member.get('UserName'),value);
                         hours += value;
                     });
                     team_member.set('TotalHours',hours);
@@ -216,7 +225,7 @@ Ext.define('CustomApp', {
     _makeGrid: function() {
         var color_renderer = this._renderColor;
         
-        var grid = this.down('#grid_box').add({
+        this.grid = this.down('#grid_box').add({
             xtype:'rallygrid',
             store: this.team_store,
             enableEditing: false,
@@ -229,6 +238,36 @@ Ext.define('CustomApp', {
             ]
         });
         
+        if ( this._isAbleToDownloadFiles() ) {
+            this._addDownloadButton();
+        }
+        
+    },
+    _makeCSV: function() {
+        var store = this.grid.getStore();
+        var columns = this.grid.getColumnCfgs();
+        var csv_header_array = [];
+        var column_index_array = [];
+        Ext.Array.each(columns,function(column){
+            csv_header_array.push(column.text);
+            column_index_array.push(column.dataIndex);
+        });
+        var csv=[];
+        csv.push(csv_header_array.join(','));
+        var store_count = store.getCount();
+        for ( var i=0;i<store_count;i++ ) {
+            var record = store.getAt(i);
+            var row_array = [];
+            Ext.Array.each(column_index_array, function(index_name){
+                row_array.push(record.get(index_name));
+            });
+            csv.push(row_array.join(','));
+        }
+        this.logger.log("csv",csv.join('\r\n'));
+        
+        var file_name = "compliance_export.csv";
+        var blob = new Blob([csv.join("\r\n")],{type:'text/plain;charset=utf-8'});
+        saveAs(blob,file_name);
     },
     _renderColor: function(value,metaData,record) {
         var compliance = record.get('Compliance');
@@ -259,5 +298,14 @@ Ext.define('CustomApp', {
         
         metaData.style = "background-color: " + color;
         return value;
+    },
+    _isAbleToDownloadFiles: function() {
+        try { 
+            var isFileSaverSupported = !!new Blob(); 
+        } catch(e){
+            this.logger.log(" NOTE: This browser does not support downloading");
+            return false;
+        }
+        return true;
     }
 });
