@@ -154,7 +154,8 @@ Ext.define('CustomApp', {
             var record = entry.tie;
             var time_oid = record.get('TimeEntryItem').ObjectID;
             var wp = record.get('TimeEntryItem').WorkProduct;
-            var wp_display = record.get('TimeEntryItem').WorkProductDisplayString;
+            // var wp_display = record.get('TimeEntryItem').WorkProductDisplayString;
+            var wp_display = record.get('TimeEntryItem').Project.Name;
             var task = record.get('TimeEntryItem').Task;
             var task_display = record.get('TimeEntryItem').TaskDisplayString;
             var project = record.get('TimeEntryItem').Project.Name;
