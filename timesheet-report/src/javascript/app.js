@@ -196,7 +196,8 @@ Ext.define('CustomApp', {
             fetch:['TimeEntryItem','Hours','ObjectID',
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
-                'Name','Expense','WeekStartDate'],
+                'Name','Expense','WeekStartDate',
+                'Projects'],
             filters: [
                 {property:'TimeEntryItem.User.ObjectID',value:team_member.get('ObjectID')},
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
@@ -208,10 +209,6 @@ Ext.define('CustomApp', {
                     var by_entry = {}; // key is object id for line of time
                     Ext.Array.each(records,function(record){
                         var time_oid = record.get('TimeEntryItem').ObjectID;
-                        
-//                        console.log( time_oid );
-//                        console.log( wp, wp_display);
-//                        console.log( task, task_display);
                         
                         if ( !by_entry[time_oid] ) {
                             by_entry[time_oid] = { tie: record, team_member: team_member, total: 0 };
@@ -235,7 +232,12 @@ Ext.define('CustomApp', {
             var time_oid = record.get('TimeEntryItem').ObjectID;
             var wp = record.get('TimeEntryItem').WorkProduct;
             // var wp_display = record.get('TimeEntryItem').WorkProductDisplayString;
-            var wp_display = record.get('TimeEntryItem').Project.Name;
+            // var wp_display = record.get('TimeEntryItem').Project.Name;
+            var projects = wp.Projects;
+            var wp_display = "";
+            if ( projects ) {
+                wp_display = projects.Name;
+            }
             var task = record.get('TimeEntryItem').Task;
             var task_display = record.get('TimeEntryItem').TaskDisplayString;
             var project = record.get('TimeEntryItem').Project.Name;
@@ -328,7 +330,7 @@ Ext.define('CustomApp', {
             var record = store.getAt(i);
             var row_array = [];
             Ext.Array.each(column_index_array, function(index_name){
-                row_array.push(record.get(index_name));
+                row_array.push('"' + record.get(index_name) + '"');
             });
             csv.push(row_array.join(','));
         }
