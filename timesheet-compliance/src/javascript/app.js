@@ -32,7 +32,7 @@ Ext.define('CustomApp', {
     _addDownloadButton: function() {
         this.down('#save_button_box').add({
             xtype:'rallybutton',
-            text:'save',
+            text:'Export to CSV',
             scope: this,
             handler: function() {
                 this._makeCSV();
