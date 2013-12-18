@@ -90,18 +90,37 @@ Ext.define('CustomApp', {
             model:'Project',
             filters: [{ property:'ObjectID', value: project_oid }],
             autoLoad: true,
+            fetch: ['TeamMembers','Name','Children'],
             listeners: {
                 scope: this,
                 load: function(store,records){
                     this.time_store.removeAll();
                     Ext.Array.each(records, function(project){
-                        project.getCollection('TeamMembers').load({
-                            scope: this,
-                            fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
-                            callback: function(users, operation, success) {
-                                deferred.resolve(users);
-                            }
-                        });
+                        me.logger.log(project);
+                        if ( project.get('Children').Count > 0 ) {
+                            // get all users
+                            Ext.create('Rally.data.wsapi.Store',{
+                                model:'User',
+                                filters: [{ property: 'UserName', operator: 'contains', value: '@' }],
+                                autoLoad: true,
+                                fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
+                                listeners: {
+                                    scope: me,
+                                    load: function(store,users){
+                                        deferred.resolve(users);
+                                    }
+                                }
+
+                            });
+                        } else {
+                            project.getCollection('TeamMembers').load({
+                                scope: this,
+                                fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
+                                callback: function(users, operation, success) {
+                                    deferred.resolve(users);
+                                }
+                            });
+                        }
                     });
                 }
             }
