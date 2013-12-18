@@ -5,7 +5,10 @@ Ext.define('CustomApp', {
     logger: new Rally.technicalservices.Logger(),
     defaults: { padding: 5, margin: 5 },
     items: [
-        {xtype:'container',itemId:'date_selector_box'}, 
+        {xtype:'container', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }, items:[
+            {xtype:'container',itemId:'date_selector_box'}, 
+            {xtype:'container',itemId:'save_button_box'}
+        ]},
         {xtype:'container',itemId:'select_checks_box', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }},
         {xtype:'container',itemId:'grid_box'},
         {xtype:'tsinfolink'}
@@ -82,6 +85,17 @@ Ext.define('CustomApp', {
     _getBeginningOfWeek: function(js_date){
         var start_of_week_here = Ext.Date.add(js_date, Ext.Date.DAY, -1 * js_date.getDay());
         return start_of_week_here;
+    },
+    _addDownloadButton: function() {
+        this.down('#save_button_box').add({
+            xtype:'rallybutton',
+            text:'save',
+            scope: this,
+            handler: function() {
+                this._makeCSV();
+            }
+        });
+        
     },
     _getTeamMembers: function(project_oid) {
         var me = this;
@@ -273,7 +287,7 @@ Ext.define('CustomApp', {
         });
     },
     _makeGrid: function() {        
-        var grid = this.down('#grid_box').add({
+        this.grid = this.down('#grid_box').add({
             xtype:'rallygrid',
             store: this.time_store,
             enableEditing: false,
@@ -294,5 +308,43 @@ Ext.define('CustomApp', {
             ]
         });
         
+        if ( this._isAbleToDownloadFiles() ) {
+            this._addDownloadButton();
+        }
+    },
+    _makeCSV: function() {
+        var store = this.grid.getStore();
+        var columns = this.grid.getColumnCfgs();
+        var csv_header_array = [];
+        var column_index_array = [];
+        Ext.Array.each(columns,function(column){
+            csv_header_array.push(column.text);
+            column_index_array.push(column.dataIndex);
+        });
+        var csv=[];
+        csv.push(csv_header_array.join(','));
+        var store_count = store.getCount();
+        for ( var i=0;i<store_count;i++ ) {
+            var record = store.getAt(i);
+            var row_array = [];
+            Ext.Array.each(column_index_array, function(index_name){
+                row_array.push(record.get(index_name));
+            });
+            csv.push(row_array.join(','));
+        }
+        this.logger.log("csv",csv.join('\r\n'));
+        
+        var file_name = "compliance_export.csv";
+        var blob = new Blob([csv.join("\r\n")],{type:'text/plain;charset=utf-8'});
+        saveAs(blob,file_name);
+    },
+    _isAbleToDownloadFiles: function() {
+        try { 
+            var isFileSaverSupported = !!new Blob(); 
+        } catch(e){
+            this.logger.log(" NOTE: This browser does not support downloading");
+            return false;
+        }
+        return true;
     }
 });
