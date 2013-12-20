@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Compliance</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Thu Dec 19 2013 18:14:26 GMT-0800 (PST) -->
+    <!--  Build Date: Thu Dec 19 2013 19:11:13 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Dec 19 2013 18:14:26 GMT-0800 (PST)";
-        var CHECKSUM = 37119941399;
+        var APP_BUILD_DATE = "Thu Dec 19 2013 19:11:13 GMT-0800 (PST)";
+        var CHECKSUM = 43694379071;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -544,6 +544,10 @@ Ext.define('CustomApp', {
             data: [{'DisplayName':'Loading','UserName':'', 'ObjectID':-1}]
         });
         
+        this.compliance_store = Ext.create('Rally.data.custom.Store',{
+            data: [{'DisplayName':'Loading','UserName':'', 'ObjectID':-1, 'Period':''}]
+        });
+        
         this._getTeamMembers(this.getContext().getProject().ObjectID).then({
             success: function(users){
                 Ext.Array.each(users, function(user) {
@@ -554,7 +558,7 @@ Ext.define('CustomApp', {
                     });
                 });
                                     
-                me._addDateSelector();
+                me._addDateSelectors();
                 me._addCheckboxes();
             }
         });
@@ -620,24 +624,46 @@ Ext.define('CustomApp', {
             }
         });
     },
-    _addDateSelector: function() {
-        var selector = this.down('#date_selector_box').add({
+    _addDateSelectors: function() {
+        var start_selector = this.down('#date_selector_box').add({
             xtype:'rallydatefield',
-            fieldLabel: 'Week beginning',
+            itemId:'start_date_selector',
+            fieldLabel: 'Include weeks from:',
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
+                    this._mask("Gathering timesheet data...");
                     var week_start = this._getBeginningOfWeek(new_value);
                     if ( week_start !== new_value ) {
                         dp.setValue(week_start);
                     }
                     if ( new_value.getDay() === 0 ) {
-                        this._getTimesheets(new_value);
+                        this._mask("Gathering timesheet data...");
+                        this._getTimesheets();
                     }
                 }
             }
         });
-        selector.setValue(new Date());
+        var end_selector = this.down('#date_selector_box').add({
+            xtype:'rallydatefield',
+            itemId:'end_date_selector',
+            fieldLabel: 'to:',
+            listeners: {
+                scope: this,
+                change: function(dp, new_value) {
+                    this._mask("Gathering timesheet data...");
+                    var week_start = this._getBeginningOfWeek(new_value);
+                    if ( week_start !== new_value ) {
+                        dp.setValue(week_start);
+                    }
+                    if ( new_value.getDay() === 0 ) {
+                        this._getTimesheets();
+                    }
+                }
+            }
+        });
+        start_selector.setValue(new Date());
+        end_selector.setValue(new Date());
     },
     _getBeginningOfWeek: function(js_date){
         var start_of_week_here = Ext.Date.add(js_date, Ext.Date.DAY, -1 * js_date.getDay());
@@ -691,7 +717,7 @@ Ext.define('CustomApp', {
                                 scope: me,
                                 fetch: ['DisplayName','UserName','ObjectID'],
                                 callback: function(users, operation, success) {
-                                    deferred.resolve([users]);
+                                    deferred.resolve(users);
                                 }
                             });
                         }
@@ -703,37 +729,61 @@ Ext.define('CustomApp', {
         this._makeGrid();
         return deferred.promise;
     },
-    _getTimesheets: function(week_start) {
+    _getTimesheets: function() {
         var me = this;
         this._mask("Gathering timesheet data...");
-        this.logger.log("_getTimesheets",week_start);
-        this.team_store.clearFilter();
-        var number_of_team_members = this.team_store.getCount();
+        this.logger.log("_getTimesheets");
+        this.compliance_store.clearFilter();
+        this.compliance_store.removeAll();
         
-        var promises = [];
-        for ( var i=0;i<number_of_team_members;i++ ) {
-            var team_member = this.team_store.getAt(i);
-            team_member.set('TotalHours',-1);
-            team_member.set('Compliance',"waiting");
-            promises.push(this._getTimesheetForTeamMember(week_start,team_member));
-        }
-        
-        Deft.Promise.all(promises).then({
-            success: function(records) {
-                me._applyFilter();
-            },
-            failure: function(error) {
-              // not trapped yet
-                alert(error);
+        var start_end = this._getTimeRange();
+
+        if ( start_end.length == 2 ) {
+            var first_week = start_end[0];
+            var last_week = start_end[1];
+            
+            var number_of_team_members = this.team_store.getCount();
+            
+            var week_start = first_week;
+            var promises = [];
+
+            while ( week_start <= last_week ) {
+                var week_end = Rally.util.DateTime.add(week_start,'day',6);
+                var period = Ext.Date.format(week_start, 'm/d/y') + " - " + Rally.util.DateTime.format(week_end, 'm/d/y');
+                
+                for ( var i=0;i<number_of_team_members;i++ ) {
+                    var team_member = this.team_store.getAt(i);
+                    this.compliance_store.add({
+                        "DisplayName":team_member.get("DisplayName"), 
+                        "UserName":team_member.get("UserName"),
+                        "ObjectID":team_member.get("ObjectID"),
+                        'TotalHours':-1,
+                        'Compliance':"waiting",
+                        'Period':period
+                    });
+                    
+                    promises.push(this._getTimesheetForTeamMember(week_start,this.compliance_store.last()));
+                }
+                week_start = Rally.util.DateTime.add(week_start,'day',7);
             }
-        });
+            Deft.Promise.all(promises).then({
+                success: function(records) {
+                    me._applyFilter();
+                },
+                failure: function(error) {
+                  // not trapped yet
+                    alert(error);
+                }
+            });
+
+        }
     },
     _getTimesheetForTeamMember: function(week_start,team_member) {
         this.logger.log("_getTimesheetForTeamMember",week_start,team_member);
+        this._mask("Gathering timesheet data...");
         var deferred = Ext.create('Deft.Deferred');
         // force to midnight even in UTC
         var start_date = Rally.util.DateTime.toIsoString(week_start,true).replace(/T.*$/,"T00:00:00.000Z");
-        this.logger.log("Start Date:",start_date);
         
         Ext.create('Rally.data.wsapi.Store',{
             autoLoad: true,
@@ -762,8 +812,8 @@ Ext.define('CustomApp', {
     _applyFilter: function() {
         this.logger.log("Applying Filters");
         this._unmask();
-        this.team_store.clearFilter();
-        this.team_store.filterBy(function(record,id){
+        this.compliance_store.clearFilter();
+        this.compliance_store.filterBy(function(record,id){
             if ( record.get('Hours') === -1 ) {
                 return true;
             }
@@ -800,12 +850,13 @@ Ext.define('CustomApp', {
         
         this.grid = this.down('#grid_box').add({
             xtype:'rallygrid',
-            store: this.team_store,
+            store: this.compliance_store,
             enableEditing: false,
             sortableColumns: false,
             columnCfgs:[ 
                 { text:'Name',dataIndex:'DisplayName', flex: 1},
                 { text:'User Name',dataIndex:'UserName',flex:1},
+                { text:'Period',dataIndex:'Period',flex:1},
                 { text:'Hours',dataIndex:'TotalHours', renderer: color_renderer },
                 { text:'Compliance',dataIndex:'Compliance', renderer: color_renderer}
             ]
@@ -883,6 +934,29 @@ Ext.define('CustomApp', {
             return false;
         }
         return true;
+    },
+    _getTimeRange: function() {
+        this.logger.log("_getTimeRange");
+        var start_selector = this.down('#start_date_selector');
+        var end_selector = this.down('#end_date_selector');
+        
+        if ( ! end_selector || ! start_selector ) {
+            return [];
+        }
+        
+        var start = start_selector.getValue();
+        var end = end_selector.getValue();
+                
+        if ( ! start || ! end ) {
+            return [];
+        }
+        
+        if ( start > end ) { 
+            start_selector.setValue(end);
+            return [];
+        }
+        
+        return [start,end];
     }
 });
 
