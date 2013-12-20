@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Compliance</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Wed Dec 18 2013 13:01:05 GMT-0800 (PST) -->
+    <!--  Build Date: Thu Dec 19 2013 18:14:26 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Dec 18 2013 13:01:05 GMT-0800 (PST)";
-        var CHECKSUM = 32898007889;
+        var APP_BUILD_DATE = "Thu Dec 19 2013 18:14:26 GMT-0800 (PST)";
+        var CHECKSUM = 37119941399;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -545,7 +545,15 @@ Ext.define('CustomApp', {
         });
         
         this._getTeamMembers(this.getContext().getProject().ObjectID).then({
-            success: function(records){
+            success: function(users){
+                Ext.Array.each(users, function(user) {
+                    me.team_store.add({
+                        "DisplayName":user.get("DisplayName"), 
+                        "UserName":user.get("UserName"),
+                        "ObjectID":user.get("ObjectID")
+                    });
+                });
+                                    
                 me._addDateSelector();
                 me._addCheckboxes();
             }
@@ -635,32 +643,58 @@ Ext.define('CustomApp', {
         var start_of_week_here = Ext.Date.add(js_date, Ext.Date.DAY, -1 * js_date.getDay());
         return start_of_week_here;
     },
+    _mask: function(text) {
+        if ( this.down('#grid_box').getEl() ) {
+            this.down('#grid_box').getEl().unmask();
+            this.down('#grid_box').getEl().mask(text);
+        }
+    },
+    _unmask: function() {
+        if ( this.down('#grid_box').getEl() ) {
+            this.down('#grid_box').getEl().unmask();
+        }
+    },
     _getTeamMembers: function(project_oid) {
         var me = this;
         var deferred = Ext.create('Deft.Deferred');
         Ext.create('Rally.data.wsapi.Store',{
             model:'Project',
             filters: [{ property:'ObjectID', value: project_oid }],
+            fetch: ['TeamMembers','Name','Children'],
             autoLoad: true,
             listeners: {
                 scope: this,
                 load: function(store,records){
                     this.team_store.removeAll();
                     Ext.Array.each(records, function(project){
-                        project.getCollection('TeamMembers').load({
-                            scope: this,
-                            fetch: ['DisplayName','UserName','ObjectID'],
-                            callback: function(users, operation, success) {
-                                Ext.Array.each(users, function(user) {
-                                    me.team_store.add({
-                                        "DisplayName":user.get("DisplayName"), 
-                                        "UserName":user.get("UserName"),
-                                        "ObjectID":user.get("ObjectID")
-                                    });
-                                });
-                                deferred.resolve([]);
-                            }
-                        });
+                        me.logger.log("project",project);
+                        me._mask("Gathering People...");
+                        if ( project.get('Children').Count > 0 ) {
+                            // get all users
+                            me.logger.log("Get all users");
+                            Ext.create('Rally.data.wsapi.Store',{
+                                model:'User',
+                                filters: [{ property: 'UserName', operator: 'contains', value: '@' }],
+                                autoLoad: true,
+                                fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
+                                listeners: {
+                                    scope: me,
+                                    load: function(store,users){
+                                        deferred.resolve(users);
+                                    }
+                                }
+
+                            });
+                        } else {
+                            me.logger.log("Get this team's members");
+                            project.getCollection('TeamMembers').load({
+                                scope: me,
+                                fetch: ['DisplayName','UserName','ObjectID'],
+                                callback: function(users, operation, success) {
+                                    deferred.resolve([users]);
+                                }
+                            });
+                        }
                     });
                 }
             }
@@ -670,18 +704,33 @@ Ext.define('CustomApp', {
         return deferred.promise;
     },
     _getTimesheets: function(week_start) {
+        var me = this;
+        this._mask("Gathering timesheet data...");
         this.logger.log("_getTimesheets",week_start);
         this.team_store.clearFilter();
         var number_of_team_members = this.team_store.getCount();
+        
+        var promises = [];
         for ( var i=0;i<number_of_team_members;i++ ) {
             var team_member = this.team_store.getAt(i);
             team_member.set('TotalHours',-1);
             team_member.set('Compliance',"waiting");
-            this._getTimesheetForTeamMember(week_start,team_member);
+            promises.push(this._getTimesheetForTeamMember(week_start,team_member));
         }
+        
+        Deft.Promise.all(promises).then({
+            success: function(records) {
+                me._applyFilter();
+            },
+            failure: function(error) {
+              // not trapped yet
+                alert(error);
+            }
+        });
     },
     _getTimesheetForTeamMember: function(week_start,team_member) {
         this.logger.log("_getTimesheetForTeamMember",week_start,team_member);
+        var deferred = Ext.create('Deft.Deferred');
         // force to midnight even in UTC
         var start_date = Rally.util.DateTime.toIsoString(week_start,true).replace(/T.*$/,"T00:00:00.000Z");
         this.logger.log("Start Date:",start_date);
@@ -704,13 +753,15 @@ Ext.define('CustomApp', {
                     });
                     team_member.set('TotalHours',hours);
                     team_member.set('Compliance',this._getComplianceFromHours(hours));
-                    this._applyFilter();
+                    deferred.resolve([team_member]);
                 }
             }
         });
+        return deferred.promise;
     },
     _applyFilter: function() {
         this.logger.log("Applying Filters");
+        this._unmask();
         this.team_store.clearFilter();
         this.team_store.filterBy(function(record,id){
             if ( record.get('Hours') === -1 ) {
@@ -759,6 +810,9 @@ Ext.define('CustomApp', {
                 { text:'Compliance',dataIndex:'Compliance', renderer: color_renderer}
             ]
         });
+        
+        this._mask("Gathering data...");
+
         
         if ( this._isAbleToDownloadFiles() ) {
             this._addDownloadButton();
