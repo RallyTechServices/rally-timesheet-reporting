@@ -169,7 +169,7 @@ Ext.define('CustomApp', {
                                 scope: me,
                                 fetch: ['DisplayName','UserName','ObjectID'],
                                 callback: function(users, operation, success) {
-                                    deferred.resolve([users]);
+                                    deferred.resolve(users);
                                 }
                             });
                         }
@@ -188,11 +188,15 @@ Ext.define('CustomApp', {
         this.team_store.clearFilter();
         var number_of_team_members = this.team_store.getCount();
         
+        var week_end = Rally.util.DateTime.add(week_start,'day',6);
+        var period = Ext.Date.format(week_start, 'm/d/y') + " - " + Rally.util.DateTime.format(week_end, 'm/d/y');
+        
         var promises = [];
         for ( var i=0;i<number_of_team_members;i++ ) {
             var team_member = this.team_store.getAt(i);
             team_member.set('TotalHours',-1);
             team_member.set('Compliance',"waiting");
+            team_member.set('Period',period);
             promises.push(this._getTimesheetForTeamMember(week_start,team_member));
         }
         
@@ -284,6 +288,7 @@ Ext.define('CustomApp', {
             columnCfgs:[ 
                 { text:'Name',dataIndex:'DisplayName', flex: 1},
                 { text:'User Name',dataIndex:'UserName',flex:1},
+                { text:'Period',dataIndex:'Period',flex:1},
                 { text:'Hours',dataIndex:'TotalHours', renderer: color_renderer },
                 { text:'Compliance',dataIndex:'Compliance', renderer: color_renderer}
             ]
