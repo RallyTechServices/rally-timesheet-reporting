@@ -117,10 +117,8 @@ Ext.define('CustomApp', {
                         dp.setValue(week_start);
                     }
                     if ( new_value.getDay() === 0 ) {
-                        setTimeout(function(){
-                            me._mask("Gathering timesheet data...",me);
-                            me._getTimesheets();
-                        },10);
+                        me._mask("Gathering timesheet data...");
+                        me._getTimesheets();
                     }
                 }
             }
@@ -137,10 +135,8 @@ Ext.define('CustomApp', {
                         dp.setValue(week_start);
                     }
                     if ( new_value.getDay() === 0 ) {
-                        setTimeout(function(){
-                            me._mask("Gathering timesheet data...",me);
-                            me._getTimesheets();
-                        },10);
+                        me._mask("Gathering timesheet data...",me);
+                        me._getTimesheets();
                     }
                 }
             }
@@ -153,7 +149,10 @@ Ext.define('CustomApp', {
         return start_of_week_here;
     },
     _mask: function(text) {
-        this.setLoading(text);
+        var me = this;
+        setTimeout(function(){
+            me.setLoading(text);
+        },10);
     },
     _unmask: function() {
         this.setLoading(false);
@@ -210,7 +209,7 @@ Ext.define('CustomApp', {
     _getTimesheets: function() {
         var me = this;
         this.logger.log("_getTimesheets");
-        
+        me
         this.compliance_store.clearFilter(true);
         this.compliance_store.removeAll();
         
@@ -259,6 +258,9 @@ Ext.define('CustomApp', {
     },
     _getTimesheetForTeamMember: function(week_start,team_member) {
         this.logger.log("_getTimesheetForTeamMember",week_start,team_member);
+        this._mask("Gathering timesheets...");
+
+        
         var deferred = Ext.create('Deft.Deferred');
         // force to midnight even in UTC
         var start_date = Rally.util.DateTime.toIsoString(week_start,true).replace(/T.*$/,"T00:00:00.000Z");
