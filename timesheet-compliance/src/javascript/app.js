@@ -24,7 +24,14 @@ Ext.define('CustomApp', {
         });
         
         this.compliance_store = Ext.create('Rally.data.custom.Store',{
-            data: [{'DisplayName':'Loading','UserName':'', 'ObjectID':-1, 'Period':''}]
+            data: [{
+                'DisplayName':'Loading',
+                'UserName':'', 
+                'ObjectID':-1, 
+                'Period':'', 
+                'Compliance':'waiting',
+                'TotalHours':0
+                }]
         });
         
         this._getTeamMembers(this.getContext().getProject().ObjectID).then({
@@ -33,7 +40,8 @@ Ext.define('CustomApp', {
                     me.team_store.add({
                         "DisplayName":user.get("DisplayName"), 
                         "UserName":user.get("UserName"),
-                        "ObjectID":user.get("ObjectID")
+                        "ObjectID":user.get("ObjectID"),
+                        "TotalHours":0
                     });
                 });
                                     
@@ -209,7 +217,6 @@ Ext.define('CustomApp', {
     _getTimesheets: function() {
         var me = this;
         this.logger.log("_getTimesheets");
-        me
         this.compliance_store.clearFilter(true);
         this.compliance_store.removeAll();
         
@@ -218,9 +225,7 @@ Ext.define('CustomApp', {
         if ( start_end.length == 2 ) {
             var first_week = start_end[0];
             var last_week = start_end[1];
-            
-            var number_of_team_members = this.team_store.getCount();
-            
+                        
             var week_start = first_week;
             var promises = [];
 
@@ -228,19 +233,7 @@ Ext.define('CustomApp', {
                 var week_end = Rally.util.DateTime.add(week_start,'day',6);
                 var period = Ext.Date.format(week_start, 'm/d/y') + " - " + Rally.util.DateTime.format(week_end, 'm/d/y');
                 
-                for ( var i=0;i<number_of_team_members;i++ ) {
-                    var team_member = this.team_store.getAt(i);
-                    this.compliance_store.add({
-                        "DisplayName":team_member.get("DisplayName"), 
-                        "UserName":team_member.get("UserName"),
-                        "ObjectID":team_member.get("ObjectID"),
-                        'TotalHours':-1,
-                        'Compliance':"waiting",
-                        'Period':period
-                    });
-                    
-                    promises.push(this._getTimesheetForTeamMember(week_start,this.compliance_store.last()));
-                }
+                promises.push(this._getTimesheetForWeek(week_start,period));
                 week_start = Rally.util.DateTime.add(week_start,'day',7);
             }
             Deft.Promise.all(promises).then({
@@ -256,11 +249,10 @@ Ext.define('CustomApp', {
 
         }
     },
-    _getTimesheetForTeamMember: function(week_start,team_member) {
-        this.logger.log("_getTimesheetForTeamMember",week_start,team_member);
+    _getTimesheetForWeek: function(week_start,period) {
+        this.logger.log("_getTimesheetForWeek",week_start);
         this._mask("Gathering timesheets...");
 
-        
         var deferred = Ext.create('Deft.Deferred');
         // force to midnight even in UTC
         var start_date = Rally.util.DateTime.toIsoString(week_start,true).replace(/T.*$/,"T00:00:00.000Z");
@@ -269,25 +261,64 @@ Ext.define('CustomApp', {
             autoLoad: true,
             model:'TimeEntryValue',
             filters: [
-                {property:'TimeEntryItem.User.ObjectID',value:team_member.get('ObjectID')},
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
             ],
+            fetch: ['User','ObjectID','Hours','TimeEntryItem'],
             listeners: {
                 scope: this,
                 load: function(store,records){
                     var me = this;
-                    var hours = 0;
+                    var members_by_oid = {};
+                    var number_of_team_members = this.team_store.getCount();
+                    me.logger.log(" -- back from  ",start_date, " with ", records.length, "/", number_of_team_members);
+                    
+                    var lines = [];
+                    for ( var i=0;i<number_of_team_members;i++ ) {
+                        var team_member = this.team_store.getAt(i);
+                        
+                        var line_item = {
+                            "DisplayName":team_member.get("DisplayName"), 
+                            "UserName":team_member.get("UserName"),
+                            "ObjectID":team_member.get("ObjectID"),
+                            'TotalHours':0,
+                            'Compliance':"waiting",
+                            'Period':period
+                        };
+                        members_by_oid[team_member.get("ObjectID")] = line_item;
+                    }
+                    me.logger.log(" -- adding hrs ", start_date );
                     Ext.Array.each(records,function(record){
                         var value = record.get('Hours') || 0;
-                        hours += value;
+                        if ( isNaN(value) ) { value = 0; }
+                        var user = members_by_oid[record.get('TimeEntryItem').User.ObjectID];
+                        var cumulative_value = user.TotalHours;
+                        if ( isNaN(cumulative_value) ) { cumulative_value = 0; }
+                        members_by_oid[record.get('TimeEntryItem').User.ObjectID].TotalHours = cumulative_value + value;
                     });
-                    team_member.set('TotalHours',hours);
-                    team_member.set('Compliance',this._getComplianceFromHours(hours));
-                    deferred.resolve([team_member]);
+                    
+                    me.logger.log(" -- compliance ", start_date);
+                    var member_count = 0;
+                    Ext.Object.each(members_by_oid,function(key,team_member){
+                        member_count++;
+                        team_member.Compliance = me._getComplianceFromHours(team_member.TotalHours);
+                    });
+                    
+                    me.compliance_store.add(me._hashToArray(members_by_oid));
+
+                    me.logger.log(" -- done with  ", start_date, member_count);
+
+                    deferred.resolve([records]);
                 }
             }
         });
         return deferred.promise;
+    },
+    _hashToArray: function(hash) {
+        var array = [];
+        Ext.Object.each(hash,function(key,value){
+            array.push(value);
+        });
+        return array;
     },
     _applyFilter: function() {
         this.logger.log("Applying Filters");
@@ -312,7 +343,7 @@ Ext.define('CustomApp', {
         },this);
     },
     _getComplianceFromHours: function(hours){
-        if ( hours === 0 ) {
+        if ( hours === 0 || hours == undefined ) {
             return "No Timesheet";
         }
         if ( hours < 37.5 ) {
