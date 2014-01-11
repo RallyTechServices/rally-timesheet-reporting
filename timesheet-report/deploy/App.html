@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Report</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Wed Dec 18 2013 13:09:42 GMT-0800 (PST) -->
+    <!--  Build Date: Fri Jan 10 2014 21:14:35 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Dec 18 2013 13:09:42 GMT-0800 (PST)";
-        var CHECKSUM = 39043004563;
+        var APP_BUILD_DATE = "Fri Jan 10 2014 21:14:35 GMT-0800 (PST)";
+        var CHECKSUM = 39036341859;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -859,7 +859,7 @@ Ext.define('CustomApp', {
         this.logger.log("csv",csv.join('\r\n'));
         
         var file_name = "compliance_export.csv";
-        var blob = new Blob([csv.join("\r\n")],{type:'text/plain;charset=utf-8'});
+        var blob = new Blob([csv.join("\r\n")],{type:'text/csv;charset=utf-8'});
         saveAs(blob,file_name);
     },
     _isAbleToDownloadFiles: function() {
