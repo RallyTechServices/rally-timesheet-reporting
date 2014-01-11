@@ -11,7 +11,8 @@ Ext.define('CustomApp', {
         ]},
         {xtype:'container',itemId:'select_checks_box', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }},
         {xtype:'container',itemId:'grid_box'},
-        {xtype:'tsinfolink'}
+        {xtype:'tsinfolink'},
+        {xtype:'container',itemId:'empty_box'}
     ],
     
     launch: function() {
@@ -103,6 +104,7 @@ Ext.define('CustomApp', {
         });
     },
     _addDateSelectors: function() {
+        var me = this;
         var start_selector = this.down('#date_selector_box').add({
             xtype:'rallydatefield',
             itemId:'start_date_selector',
@@ -110,14 +112,15 @@ Ext.define('CustomApp', {
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
-                    this._mask("Gathering timesheet data...");
                     var week_start = this._getBeginningOfWeek(new_value);
                     if ( week_start !== new_value ) {
                         dp.setValue(week_start);
                     }
                     if ( new_value.getDay() === 0 ) {
-                        this._mask("Gathering timesheet data...");
-                        this._getTimesheets();
+                        setTimeout(function(){
+                            me._mask("Gathering timesheet data...",me);
+                            me._getTimesheets();
+                        },10);
                     }
                 }
             }
@@ -129,13 +132,15 @@ Ext.define('CustomApp', {
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
-                    this._mask("Gathering timesheet data...");
                     var week_start = this._getBeginningOfWeek(new_value);
                     if ( week_start !== new_value ) {
                         dp.setValue(week_start);
                     }
                     if ( new_value.getDay() === 0 ) {
-                        this._getTimesheets();
+                        setTimeout(function(){
+                            me._mask("Gathering timesheet data...",me);
+                            me._getTimesheets();
+                        },10);
                     }
                 }
             }
@@ -148,15 +153,10 @@ Ext.define('CustomApp', {
         return start_of_week_here;
     },
     _mask: function(text) {
-        if ( this.down('#grid_box').getEl() ) {
-            this.down('#grid_box').getEl().unmask();
-            this.down('#grid_box').getEl().mask(text);
-        }
+        this.setLoading(text);
     },
     _unmask: function() {
-        if ( this.down('#grid_box').getEl() ) {
-            this.down('#grid_box').getEl().unmask();
-        }
+        this.setLoading(false);
     },
     _getTeamMembers: function(project_oid) {
         var me = this;
@@ -209,9 +209,9 @@ Ext.define('CustomApp', {
     },
     _getTimesheets: function() {
         var me = this;
-        this._mask("Gathering timesheet data...");
         this.logger.log("_getTimesheets");
-        this.compliance_store.clearFilter();
+        
+        this.compliance_store.clearFilter(true);
         this.compliance_store.removeAll();
         
         var start_end = this._getTimeRange();
@@ -247,6 +247,7 @@ Ext.define('CustomApp', {
             Deft.Promise.all(promises).then({
                 success: function(records) {
                     me._applyFilter();
+                    me._unmask();
                 },
                 failure: function(error) {
                   // not trapped yet
@@ -258,7 +259,6 @@ Ext.define('CustomApp', {
     },
     _getTimesheetForTeamMember: function(week_start,team_member) {
         this.logger.log("_getTimesheetForTeamMember",week_start,team_member);
-        this._mask("Gathering timesheet data...");
         var deferred = Ext.create('Deft.Deferred');
         // force to midnight even in UTC
         var start_date = Rally.util.DateTime.toIsoString(week_start,true).replace(/T.*$/,"T00:00:00.000Z");
@@ -289,7 +289,6 @@ Ext.define('CustomApp', {
     },
     _applyFilter: function() {
         this.logger.log("Applying Filters");
-        this._unmask();
         this.compliance_store.clearFilter();
         this.compliance_store.filterBy(function(record,id){
             if ( record.get('Hours') === -1 ) {
