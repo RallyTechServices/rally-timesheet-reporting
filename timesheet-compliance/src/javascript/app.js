@@ -291,9 +291,11 @@ Ext.define('CustomApp', {
                         var value = record.get('Hours') || 0;
                         if ( isNaN(value) ) { value = 0; }
                         var user = members_by_oid[record.get('TimeEntryItem').User.ObjectID];
-                        var cumulative_value = user.TotalHours;
-                        if ( isNaN(cumulative_value) ) { cumulative_value = 0; }
-                        members_by_oid[record.get('TimeEntryItem').User.ObjectID].TotalHours = cumulative_value + value;
+                        if ( user ) {
+                            var cumulative_value = user.TotalHours;
+                            if ( isNaN(cumulative_value) ) { cumulative_value = 0; }
+                            members_by_oid[record.get('TimeEntryItem').User.ObjectID].TotalHours = cumulative_value + value;
+                        }
                     });
                     
                     me.logger.log(" -- compliance ", start_date);

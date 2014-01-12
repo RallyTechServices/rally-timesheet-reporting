@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Compliance</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Fri Jan 10 2014 21:03:09 GMT-0800 (PST) -->
+    <!--  Build Date: Sat Jan 11 2014 17:24:11 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Fri Jan 10 2014 21:03:09 GMT-0800 (PST)";
-        var CHECKSUM = 46725399087;
+        var APP_BUILD_DATE = "Sat Jan 11 2014 17:24:11 GMT-0800 (PST)";
+        var CHECKSUM = 46852056686;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -813,9 +813,11 @@ Ext.define('CustomApp', {
                         var value = record.get('Hours') || 0;
                         if ( isNaN(value) ) { value = 0; }
                         var user = members_by_oid[record.get('TimeEntryItem').User.ObjectID];
-                        var cumulative_value = user.TotalHours;
-                        if ( isNaN(cumulative_value) ) { cumulative_value = 0; }
-                        members_by_oid[record.get('TimeEntryItem').User.ObjectID].TotalHours = cumulative_value + value;
+                        if ( user ) {
+                            var cumulative_value = user.TotalHours;
+                            if ( isNaN(cumulative_value) ) { cumulative_value = 0; }
+                            members_by_oid[record.get('TimeEntryItem').User.ObjectID].TotalHours = cumulative_value + value;
+                        }
                     });
                     
                     me.logger.log(" -- compliance ", start_date);
