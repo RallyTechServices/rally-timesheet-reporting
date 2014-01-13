@@ -296,7 +296,7 @@ Ext.define('CustomApp', {
             sortableColumns: false,
             columnCfgs:[ 
                 { text:'Work Item Type',dataIndex:'WorkItemType'},
-                { text:'Work Item Set' ,dataIndex:'WorkItemSet'},
+                { text:'Parent Project' ,dataIndex:'WorkItemSet'},
                 { text:'Work Item',     dataIndex:'WorkItem'},
                 { text:'Name',dataIndex:'DisplayName', flex: 1},
                 { text:'User Name',dataIndex:'UserName',flex:1},
