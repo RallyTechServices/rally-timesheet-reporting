@@ -19,6 +19,7 @@ Ext.define('CustomApp', {
         this.logger.log("Launched with context: ",this.getContext());
         
         this.time_store = Ext.create('Rally.data.custom.Store',{
+            pageSize: 'Infinity',
             data: [{
                 'WorkItemType':'',
                 'WorkItemSet':'',
@@ -110,12 +111,12 @@ Ext.define('CustomApp', {
                 load: function(store,records){
                     this.time_store.removeAll();
                     Ext.Array.each(records, function(project){
-                        me.logger.log(project);
                         if ( project.get('Children').Count > 0 ) {
                             // get all users
                             Ext.create('Rally.data.wsapi.Store',{
                                 model:'User',
                                 filters: [{ property: 'UserName', operator: 'contains', value: '@' }],
+                                sorters:[{property:'UserName'}],
                                 autoLoad: true,
                                 fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
                                 listeners: {
@@ -165,8 +166,17 @@ Ext.define('CustomApp', {
             start_selector.setValue(end);
             return [];
         }
+                
+        var time_range = [];
+        if ( end >= start ) {
+            var stamp = start;
+            while ( stamp <= end ) {
+                time_range.push(stamp);
+                stamp = Rally.util.DateTime.add(stamp,"day",7);
+            }
+        }
         
-        return [start,end];
+        return time_range;
     },
     _getTimesheets: function() {
         this.logger.log("_getTimesheets");
@@ -193,6 +203,7 @@ Ext.define('CustomApp', {
         Ext.create('Rally.data.wsapi.Store',{
             autoLoad: true,
             model:'TimeEntryValue',
+            limit:'Infinity',
             fetch:['TimeEntryItem','Hours','ObjectID',
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
@@ -219,7 +230,7 @@ Ext.define('CustomApp', {
                         by_entry[time_oid].total = hours;
                     });
                     this._addTimeToStore(by_entry);
-                    this.logger.log(team_member.get('UserName'), by_entry);
+                    this.logger.log(start_date, "Team member and entry data ",  records.length, team_member.get('UserName'), by_entry);
                 }
             }
         });
@@ -286,6 +297,7 @@ Ext.define('CustomApp', {
                 'ResourcePool':team_member.get('ResourcePool'),
                 'Warnings':warning
             });
+            
         });
     },
     _makeGrid: function() {        
@@ -294,6 +306,7 @@ Ext.define('CustomApp', {
             store: this.time_store,
             enableEditing: false,
             sortableColumns: false,
+            showPagingToolbar: false,
             columnCfgs:[ 
                 { text:'Work Item Type',dataIndex:'WorkItemType'},
                 { text:'Parent Project' ,dataIndex:'WorkItemSet'},
