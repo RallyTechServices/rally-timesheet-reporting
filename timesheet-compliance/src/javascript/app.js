@@ -1,6 +1,7 @@
 Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
+    projects_to_consider_parents: ['Administrative Time','Support'],
 
     logger: new Rally.technicalservices.Logger(),
     defaults: { padding: 5, margin: 5 },
@@ -34,7 +35,7 @@ Ext.define('CustomApp', {
                 }]
         });
         
-        this._getTeamMembers(this.getContext().getProject().ObjectID).then({
+        this._getTeamMembers(this.getContext().getProject().ObjectID,this).then({
             success: function(users){
                 Ext.Array.each(users, function(user) {
                     me.team_store.add({
@@ -165,8 +166,7 @@ Ext.define('CustomApp', {
     _unmask: function() {
         this.setLoading(false);
     },
-    _getTeamMembers: function(project_oid) {
-        var me = this;
+    _getTeamMembers: function(project_oid,me) {
         var deferred = Ext.create('Deft.Deferred');
         Ext.create('Rally.data.wsapi.Store',{
             model:'Project',
@@ -178,9 +178,17 @@ Ext.define('CustomApp', {
                 load: function(store,records){
                     this.team_store.removeAll();
                     Ext.Array.each(records, function(project){
-                        me.logger.log("project",project);
-                        me._mask("Gathering People...");
+                        var find_all_users = false;
+                        
                         if ( project.get('Children').Count > 0 ) {
+                            find_all_users = true;
+                        }
+                        
+                        if ( Ext.Array.indexOf(me.projects_to_consider_parents, project.get("Name")) > -1 ) {
+                            find_all_users = true;
+                        }
+                        
+                        if ( find_all_users ) {
                             // get all users
                             me.logger.log("Get all users");
                             Ext.create('Rally.data.wsapi.Store',{
