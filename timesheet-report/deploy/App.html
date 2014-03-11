@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Report</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Fri Feb 21 2014 15:40:45 GMT-0800 (PST) -->
+    <!--  Build Date: Tue Mar 11 2014 14:33:26 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Fri Feb 21 2014 15:40:45 GMT-0800 (PST)";
-        var CHECKSUM = 40101126538;
+        var APP_BUILD_DATE = "Tue Mar 11 2014 14:33:26 GMT-0700 (PDT)";
+        var CHECKSUM = 40464908518;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -864,8 +864,13 @@ Ext.define('CustomApp', {
         for ( var i=0;i<store_count;i++ ) {
             var record = store.getAt(i);
             var row_array = [];
+            // escape the quoted bits
             Ext.Array.each(column_index_array, function(index_name){
-                row_array.push('"' + record.get(index_name) + '"');
+                var text = '' + record.get(index_name);
+                if ( text !== null ) {
+                    text = text.replace(/"/g,"'");
+                }
+                row_array.push('"' + text + '"');
             });
             csv.push(row_array.join(','));
         }

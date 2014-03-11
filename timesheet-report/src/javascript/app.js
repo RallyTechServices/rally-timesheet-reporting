@@ -342,8 +342,13 @@ Ext.define('CustomApp', {
         for ( var i=0;i<store_count;i++ ) {
             var record = store.getAt(i);
             var row_array = [];
+            // escape the quoted bits
             Ext.Array.each(column_index_array, function(index_name){
-                row_array.push('"' + record.get(index_name) + '"');
+                var text = '' + record.get(index_name);
+                if ( text !== null ) {
+                    text = text.replace(/"/g,"'");
+                }
+                row_array.push('"' + text + '"');
             });
             csv.push(row_array.join(','));
         }
