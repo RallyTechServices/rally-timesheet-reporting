@@ -113,21 +113,25 @@ Ext.define('CustomApp', {
                     Ext.Array.each(records, function(project){
                         if ( project.get('Children').Count > 0 ) {
                             // get all users
+                            console.log("-- GET ALL USERS");
                             Ext.create('Rally.data.wsapi.Store',{
                                 model:'User',
                                 filters: [{ property: 'UserName', operator: 'contains', value: '@' }],
                                 sorters:[{property:'UserName'}],
                                 autoLoad: true,
+                                limit: 'Infinity',
                                 fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
                                 listeners: {
                                     scope: me,
                                     load: function(store,users){
+                                        console.log("--- FOUND " + users.length);
                                         deferred.resolve(users);
                                     }
                                 }
 
                             });
                         } else {
+                            console.log("--- GET Team Members Only");
                             project.getCollection('TeamMembers').load({
                                 scope: this,
                                 fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
