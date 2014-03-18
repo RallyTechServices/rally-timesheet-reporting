@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Compliance</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Tue Mar 11 2014 14:59:31 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue Mar 18 2014 08:49:30 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Mar 11 2014 14:59:31 GMT-0700 (PDT)";
-        var CHECKSUM = 47720921385;
+        var APP_BUILD_DATE = "Tue Mar 18 2014 08:49:30 GMT-0700 (PDT)";
+        var CHECKSUM = 47794945664;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -794,6 +794,7 @@ Ext.define('CustomApp', {
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
             ],
             fetch: ['User','ObjectID','Hours','TimeEntryItem'],
+            limit:'Infinity',
             listeners: {
                 scope: this,
                 load: function(store,records){

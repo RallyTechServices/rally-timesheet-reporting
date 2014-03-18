@@ -272,6 +272,7 @@ Ext.define('CustomApp', {
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
             ],
             fetch: ['User','ObjectID','Hours','TimeEntryItem'],
+            limit:'Infinity',
             listeners: {
                 scope: this,
                 load: function(store,records){
