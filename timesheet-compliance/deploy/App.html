@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Compliance</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Tue Mar 18 2014 08:49:30 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue Apr 08 2014 08:48:26 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Mar 18 2014 08:49:30 GMT-0700 (PDT)";
-        var CHECKSUM = 47794945664;
+        var APP_BUILD_DATE = "Tue Apr 08 2014 08:48:26 GMT-0700 (PDT)";
+        var CHECKSUM = 48083317927;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -694,6 +694,7 @@ Ext.define('CustomApp', {
             model:'Project',
             filters: [{ property:'ObjectID', value: project_oid }],
             fetch: ['TeamMembers','Name','Children'],
+            limit: 'Infinity',
             autoLoad: true,
             listeners: {
                 scope: this,
@@ -717,6 +718,7 @@ Ext.define('CustomApp', {
                                 model:'User',
                                 filters: [{ property: 'UserName', operator: 'contains', value: '@' }],
                                 autoLoad: true,
+                                limit: 'Infinity',
                                 fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
                                 listeners: {
                                     scope: me,
@@ -896,6 +898,7 @@ Ext.define('CustomApp', {
             store: this.compliance_store,
             enableEditing: false,
             sortableColumns: false,
+            showPagingToolbar: false,
             columnCfgs:[ 
                 { text:'Name',dataIndex:'DisplayName', flex: 1},
                 { text:'User Name',dataIndex:'UserName',flex:1},

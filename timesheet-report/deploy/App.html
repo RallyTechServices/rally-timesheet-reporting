@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Report</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Tue Mar 11 2014 14:56:06 GMT-0700 (PDT) -->
+    <!--  Build Date: Fri Apr 11 2014 17:15:18 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Mar 11 2014 14:56:06 GMT-0700 (PDT)";
-        var CHECKSUM = 41636512410;
+        var APP_BUILD_DATE = "Fri Apr 11 2014 17:15:18 GMT-0700 (PDT)";
+        var CHECKSUM = 41991566726;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -776,8 +776,12 @@ Ext.define('CustomApp', {
             var wp = record.get('TimeEntryItem').WorkProduct;
             // var wp_display = record.get('TimeEntryItem').WorkProductDisplayString;
             // var wp_display = record.get('TimeEntryItem').Project.Name;
-            var projects = wp.Projects;
-            var wp_display = "";
+            
+            var projects = null;
+            if ( wp && wp.Projects ) {
+                projects = wp.Projects;
+            }
+            var wp_display = null;
             if ( projects ) {
                 wp_display = projects.Name;
             }
@@ -797,7 +801,7 @@ Ext.define('CustomApp', {
             
             var warning = "";
             if ( wp_display === null ) {
-                warning = "Time assigned to Project";
+                warning = "Time assigned to Rally Project " + record.get('TimeEntryItem').Project.Name;
             }
             
             if ( wp_display !== null && wp === null ) {

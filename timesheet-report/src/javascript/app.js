@@ -254,8 +254,12 @@ Ext.define('CustomApp', {
             var wp = record.get('TimeEntryItem').WorkProduct;
             // var wp_display = record.get('TimeEntryItem').WorkProductDisplayString;
             // var wp_display = record.get('TimeEntryItem').Project.Name;
-            var projects = wp.Projects;
-            var wp_display = "";
+            
+            var projects = null;
+            if ( wp && wp.Projects ) {
+                projects = wp.Projects;
+            }
+            var wp_display = null;
             if ( projects ) {
                 wp_display = projects.Name;
             }
@@ -275,7 +279,7 @@ Ext.define('CustomApp', {
             
             var warning = "";
             if ( wp_display === null ) {
-                warning = "Time assigned to Project";
+                warning = "Time assigned to Rally Project " + record.get('TimeEntryItem').Project.Name;
             }
             
             if ( wp_display !== null && wp === null ) {

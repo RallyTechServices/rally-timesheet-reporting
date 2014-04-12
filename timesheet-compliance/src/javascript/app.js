@@ -172,6 +172,7 @@ Ext.define('CustomApp', {
             model:'Project',
             filters: [{ property:'ObjectID', value: project_oid }],
             fetch: ['TeamMembers','Name','Children'],
+            limit: 'Infinity',
             autoLoad: true,
             listeners: {
                 scope: this,
@@ -195,6 +196,7 @@ Ext.define('CustomApp', {
                                 model:'User',
                                 filters: [{ property: 'UserName', operator: 'contains', value: '@' }],
                                 autoLoad: true,
+                                limit: 'Infinity',
                                 fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
                                 listeners: {
                                     scope: me,
@@ -374,6 +376,7 @@ Ext.define('CustomApp', {
             store: this.compliance_store,
             enableEditing: false,
             sortableColumns: false,
+            showPagingToolbar: false,
             columnCfgs:[ 
                 { text:'Name',dataIndex:'DisplayName', flex: 1},
                 { text:'User Name',dataIndex:'UserName',flex:1},
