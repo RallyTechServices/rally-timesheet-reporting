@@ -346,7 +346,7 @@ Ext.define('CustomApp', {
                 { text:'Work Product', dataIndex:'WorkProduct'},
                 { text:'Work Item',     dataIndex:'WorkItem'},
                 { text:'Name',dataIndex:'DisplayName', flex: 1},
-                { text:'User Name',dataIndex:'UserName',flex:1},
+                /*{ text:'User Name',dataIndex:'UserName',flex:1},*/
                 { text:'Period',dataIndex:'Period'},
                 { text:'Actual Hours',dataIndex:'ActualHours'},
                 { text:'Capitalizable',dataIndex:'Capitalizable'},
