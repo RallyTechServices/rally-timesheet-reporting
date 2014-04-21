@@ -218,7 +218,7 @@ Ext.define('CustomApp', {
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
                 'Name','Expense','WeekStartDate',
-                'Projects'],
+                'Projects','FormattedID'],
             filters: [
                 {property:'TimeEntryItem.User.ObjectID',value:team_member.get('ObjectID')},
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
@@ -246,26 +246,34 @@ Ext.define('CustomApp', {
         });
     },
     _addTimeToStore: function(by_entry){
-        var me = this;        
+        var me = this;
         Ext.Object.each(by_entry, function(oid,entry) {
             var team_member = entry.team_member;
             var record = entry.tie;
             var time_oid = record.get('TimeEntryItem').ObjectID;
             var wp = record.get('TimeEntryItem').WorkProduct;
-            // var wp_display = record.get('TimeEntryItem').WorkProductDisplayString;
-            // var wp_display = record.get('TimeEntryItem').Project.Name;
+            var wp_display = record.get('TimeEntryItem').WorkProductDisplayString;
+                       
+            var task = record.get('TimeEntryItem').Task;
+            var task_display = record.get('TimeEntryItem').TaskDisplayString;
+            var project = record.get('TimeEntryItem').Project.Name;
+            
+            // when the time is against a defect, it might belong to a story
+            // and should be treated like a task
+            if ( task_display === null && wp && wp._type == "Defect" ) {
+                task = wp;
+                task_display = wp_display;
+                
+            }
             
             var projects = null;
             if ( wp && wp.Projects ) {
                 projects = wp.Projects;
             }
-            var wp_display = null;
+            var parent_display = null;
             if ( projects ) {
-                wp_display = projects.Name;
+                parent_display = projects.Name;
             }
-            var task = record.get('TimeEntryItem').Task;
-            var task_display = record.get('TimeEntryItem').TaskDisplayString;
-            var project = record.get('TimeEntryItem').Project.Name;
             
             var week_start = new Date(record.get('TimeEntryItem').WeekStartDate);
             week_start = new Date( week_start.getTime() + ( week_start.getTimezoneOffset() * 60000 ) );
@@ -278,6 +286,11 @@ Ext.define('CustomApp', {
             }
             
             var warning = "";
+            if ( parent_display === null && wp !== null ) {
+                console.log("   === ", wp);
+                warning = "WorkProduct (" + wp.FormattedID + ") is not assigned to Projects";
+            }
+            
             if ( wp_display === null ) {
                 warning = "Time assigned to Rally Project " + record.get('TimeEntryItem').Project.Name;
             }
@@ -299,7 +312,7 @@ Ext.define('CustomApp', {
             
             me.time_store.add({
                 'WorkItemType':project,
-                'WorkItemSet':wp_display,
+                'WorkItemSet':parent_display,
                 'WorkItem': task_display,
                 'DisplayName':team_member.get('DisplayName'),
                 'UserName':team_member.get('UserName'),
