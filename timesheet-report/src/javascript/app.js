@@ -25,6 +25,7 @@ Ext.define('CustomApp', {
                 'WorkItemSet':'',
                 'WorkItem':'',
                 'DisplayName':'Loading',
+                'WorkProduct':'',
                 'UserName':'',
                 'Period':'',
                 'ObjectID':-1,
@@ -218,7 +219,7 @@ Ext.define('CustomApp', {
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
                 'Name','Expense','WeekStartDate',
-                'Projects','FormattedID'],
+                'Projects','FormattedID','Requirement'],
             filters: [
                 {property:'TimeEntryItem.User.ObjectID',value:team_member.get('ObjectID')},
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
@@ -263,7 +264,12 @@ Ext.define('CustomApp', {
             if ( task_display === null && wp && wp._type == "Defect" ) {
                 task = wp;
                 task_display = wp_display;
-                
+                wp = null;
+                wp_display = null;
+                if ( task.Requirement ) {
+                    wp = task.Requirement;
+                    wp_display = task.Requirement.FormattedID + ": " + task.Requirement.Name;
+                }
             }
             
             var projects = null;
@@ -287,7 +293,6 @@ Ext.define('CustomApp', {
             
             var warning = "";
             if ( parent_display === null && wp !== null ) {
-                console.log("   === ", wp);
                 warning = "WorkProduct (" + wp.FormattedID + ") is not assigned to Projects";
             }
             
@@ -314,6 +319,7 @@ Ext.define('CustomApp', {
                 'WorkItemType':project,
                 'WorkItemSet':parent_display,
                 'WorkItem': task_display,
+                'WorkProduct': wp_display,
                 'DisplayName':team_member.get('DisplayName'),
                 'UserName':team_member.get('UserName'),
                 'Period':period,
@@ -337,6 +343,7 @@ Ext.define('CustomApp', {
             columnCfgs:[ 
                 { text:'Work Item Type',dataIndex:'WorkItemType'},
                 { text:'Parent Project' ,dataIndex:'WorkItemSet'},
+                { text:'Work Product', dataIndex:'WorkProduct'},
                 { text:'Work Item',     dataIndex:'WorkItem'},
                 { text:'Name',dataIndex:'DisplayName', flex: 1},
                 { text:'User Name',dataIndex:'UserName',flex:1},
