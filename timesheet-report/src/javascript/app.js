@@ -7,7 +7,8 @@ Ext.define('CustomApp', {
     items: [
         {xtype:'container', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }, items:[
             {xtype:'container',itemId:'date_selector_box'}, 
-            {xtype:'container',itemId:'save_button_box'}
+            {xtype:'container',itemId:'save_button_box'},
+            {xtype:'container',itemId:'sparkler',html:''}
         ]},
         {xtype:'container',itemId:'select_checks_box', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }},
         {xtype:'container',itemId:'grid_box'},
@@ -91,6 +92,7 @@ Ext.define('CustomApp', {
     _addDownloadButton: function() {
         this.down('#save_button_box').add({
             xtype:'rallybutton',
+            itemId: 'export_button',
             text:'Export to CSV',
             scope: this,
             handler: function() {
@@ -191,25 +193,42 @@ Ext.define('CustomApp', {
     },
     _getTimesheets: function() {
         this.logger.log("_getTimesheets");
+        this.down('#sparkler').setLoading("Loading Timesheets...");
+        this.down('#export_button').setDisabled(true);
+        
         var start_end = this._getTimeRange();
         
         this.time_store.clearFilter();
         this.time_store.removeAll();
-        
+                
         var number_of_team_members = this.team_members.length;
         
+        var promises = [];
         for ( var w=0;w<start_end.length;w++ ) {
             for ( var i=0;i<number_of_team_members;i++ ) {
                 var team_member = this.team_members[i];
-                this._getTimesheetForTeamMember(start_end[w],team_member);
+                promises.push(this._getTimesheetForTeamMember(start_end[w],team_member));
             }
         }
+        Deft.Promise.all(promises).then({
+            scope: this,
+            success: function() {
+                this.down('#grid_box').doLayout();
+                
+                this.down('#sparkler').setLoading(false);
+                this.down('#export_button').setDisabled(false);
+                this.logger.log("Ready");
+            },
+            failure: function(message){
+                alert("Problem loading timesheets: " + message);
+            }
+        });
     },
     _getTimesheetForTeamMember: function(week_start,team_member) {
-        this.logger.log("_getTimesheetForTeamMember",week_start,team_member);
+        //this.logger.log("_getTimesheetForTeamMember",week_start,team_member);
+        var deferred = Ext.create('Deft.Deferred');
         // force to midnight even in UTC
         var start_date = Rally.util.DateTime.toIsoString(week_start,true).replace(/T.*$/,"T00:00:00.000Z");
-        this.logger.log("Start Date:",start_date);
         
         Ext.create('Rally.data.wsapi.Store',{
             autoLoad: true,
@@ -241,10 +260,11 @@ Ext.define('CustomApp', {
                         by_entry[time_oid].total = hours;
                     });
                     this._addTimeToStore(by_entry);
-                    this.logger.log(start_date, "Team member and entry data ",  records.length, team_member.get('UserName'), by_entry);
+                    deferred.resolve(by_entry);
                 }
             }
         });
+        return deferred;
     },
     _addTimeToStore: function(by_entry){
         var me = this;
@@ -340,6 +360,7 @@ Ext.define('CustomApp', {
             enableEditing: false,
             sortableColumns: false,
             showPagingToolbar: false,
+            suspendLayout: true,
             columnCfgs:[ 
                 { text:'Work Item Type',dataIndex:'WorkItemType'},
                 { text:'Parent Project' ,dataIndex:'WorkItemSet'},
@@ -386,7 +407,7 @@ Ext.define('CustomApp', {
             });
             csv.push(row_array.join(','));
         }
-        this.logger.log("csv",csv.join('\r\n'));
+        //this.logger.log("csv",csv.join('\r\n'));
         
         var file_name = "timesheet_export.csv";
         var blob = new Blob([csv.join("\r\n")],{type:'text/csv;charset=utf-8'});

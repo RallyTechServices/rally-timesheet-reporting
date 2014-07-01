@@ -417,7 +417,8 @@ Ext.define('CustomApp', {
         this.logger.log("csv",csv.join('\r\n'));
         
         var file_name = "compliance_export.csv";
-        var blob = new Blob([csv.join("\r\n")],{type:'text/csv;charset=utf-8'});
+        //var blob = new Blob([csv.join("\r\n")],{type:'text/csv;charset=utf-8'});
+        var blob = new Blob([csv.join("\r\n")],{type:'text/csv'});
         saveAs(blob,file_name);
     },
     _renderColor: function(value,metaData,record) {
