@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Compliance</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Mon Jul 21 2014 16:10:10 GMT-0700 (PDT) -->
+    <!--  Build Date: Mon Jul 21 2014 16:34:30 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon Jul 21 2014 16:10:10 GMT-0700 (PDT)";
-        var CHECKSUM = 48554872766;
+        var APP_BUILD_DATE = "Mon Jul 21 2014 16:34:30 GMT-0700 (PDT)";
+        var CHECKSUM = 50114687394;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -718,7 +718,8 @@ Ext.define('CustomApp', {
                                 model:'User',
                                 filters: [
                                     { property: 'UserName', operator: 'contains', value: '@' },
-                                    { property: 'Disabled', value: false }
+                                    { property: 'Disabled', value: false },
+                                    { property: 'ExemptfromTimesheet', value: false}
                                 ],
                                 autoLoad: true,
                                 limit: 'Infinity',
@@ -735,9 +736,16 @@ Ext.define('CustomApp', {
                             me.logger.log("Get this team's members");
                             project.getCollection('TeamMembers').load({
                                 scope: me,
-                                fetch: ['DisplayName','UserName','ObjectID'],
+                                fetch: ['DisplayName','UserName','ObjectID','ExemptfromTimesheet','Disabled'],
                                 callback: function(users, operation, success) {
-                                    deferred.resolve(users);
+                                    var valid_users = [];
+                                    Ext.Array.each(users,function(user){
+                                        me.logger.log(user.get('DisplayName'),user.get('Disabled'),user.get('ExemptfromTimesheet'));
+                                        if (!user.get('Disabled') && !user.get('ExemptfromTimesheet')) {
+                                            valid_users.push(user)
+                                        }
+                                    });
+                                    deferred.resolve(valid_users);
                                 }
                             });
                         }

@@ -196,7 +196,8 @@ Ext.define('CustomApp', {
                                 model:'User',
                                 filters: [
                                     { property: 'UserName', operator: 'contains', value: '@' },
-                                    { property: 'Disabled', value: false }
+                                    { property: 'Disabled', value: false },
+                                    { property: 'ExemptfromTimesheet', value: false}
                                 ],
                                 autoLoad: true,
                                 limit: 'Infinity',
@@ -213,9 +214,16 @@ Ext.define('CustomApp', {
                             me.logger.log("Get this team's members");
                             project.getCollection('TeamMembers').load({
                                 scope: me,
-                                fetch: ['DisplayName','UserName','ObjectID'],
+                                fetch: ['DisplayName','UserName','ObjectID','ExemptfromTimesheet','Disabled'],
                                 callback: function(users, operation, success) {
-                                    deferred.resolve(users);
+                                    var valid_users = [];
+                                    Ext.Array.each(users,function(user){
+                                        me.logger.log(user.get('DisplayName'),user.get('Disabled'),user.get('ExemptfromTimesheet'));
+                                        if (!user.get('Disabled') && !user.get('ExemptfromTimesheet')) {
+                                            valid_users.push(user)
+                                        }
+                                    });
+                                    deferred.resolve(valid_users);
                                 }
                             });
                         }
