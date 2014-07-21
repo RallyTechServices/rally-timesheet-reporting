@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Compliance</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Thu May 29 2014 12:23:23 GMT-0700 (PDT) -->
+    <!--  Build Date: Mon Jul 21 2014 16:10:10 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu May 29 2014 12:23:23 GMT-0700 (PDT)";
-        var CHECKSUM = 48264363272;
+        var APP_BUILD_DATE = "Mon Jul 21 2014 16:10:10 GMT-0700 (PDT)";
+        var CHECKSUM = 48554872766;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -716,7 +716,10 @@ Ext.define('CustomApp', {
                             me.logger.log("Get all users");
                             Ext.create('Rally.data.wsapi.Store',{
                                 model:'User',
-                                filters: [{ property: 'UserName', operator: 'contains', value: '@' }],
+                                filters: [
+                                    { property: 'UserName', operator: 'contains', value: '@' },
+                                    { property: 'Disabled', value: false }
+                                ],
                                 autoLoad: true,
                                 limit: 'Infinity',
                                 fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],

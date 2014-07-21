@@ -194,7 +194,10 @@ Ext.define('CustomApp', {
                             me.logger.log("Get all users");
                             Ext.create('Rally.data.wsapi.Store',{
                                 model:'User',
-                                filters: [{ property: 'UserName', operator: 'contains', value: '@' }],
+                                filters: [
+                                    { property: 'UserName', operator: 'contains', value: '@' },
+                                    { property: 'Disabled', value: false }
+                                ],
                                 autoLoad: true,
                                 limit: 'Infinity',
                                 fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
