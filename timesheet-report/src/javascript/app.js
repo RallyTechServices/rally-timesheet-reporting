@@ -35,6 +35,7 @@ Ext.define('CustomApp', {
                 "Category":"",
                 'Management':'',
                 "Department":"",
+                "Company":"",
                 "ResourcePool":"",
                 "Warnings":""
             }]
@@ -131,7 +132,7 @@ Ext.define('CustomApp', {
                                 sorters:[{property:'UserName'}],
                                 autoLoad: true,
                                 limit: 'Infinity',
-                                fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
+                                fetch: ['DisplayName','UserName','ObjectID','Category','Company','Department','ResourcePool'],
                                 listeners: {
                                     scope: me,
                                     load: function(store,users){
@@ -143,7 +144,7 @@ Ext.define('CustomApp', {
                         } else {
                             project.getCollection('TeamMembers').load({
                                 scope: this,
-                                fetch: ['DisplayName','UserName','ObjectID','Category','Department','ResourcePool'],
+                                fetch: ['DisplayName','UserName','ObjectID','Category','Company','Department','ResourcePool'],
                                 callback: function(users, operation, success) {
                                     deferred.resolve(users);
                                 }
@@ -347,6 +348,7 @@ Ext.define('CustomApp', {
                 'Capitalizable':capitalizable,
                 'Category':team_member.get('Category'),
                 'Department':team_member.get('Department'),
+                'Company':team_member.get('Company'),
                 'ResourcePool':team_member.get('ResourcePool'),
                 'Warnings':warning
             });
@@ -373,6 +375,7 @@ Ext.define('CustomApp', {
                 { text:'Capitalizable',dataIndex:'Capitalizable'},
                 { text:"Category",dataIndex:'Category'},
                 { text:"Department",dataIndex:'Department'},
+                { text:"Company",dataIndex:'Company'},
                 { text:"ResourcePool",dataIndex:'ResourcePool'},
                 { text:"Warnings",dataIndex:'Warnings' }
             ]
