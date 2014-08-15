@@ -16,7 +16,6 @@ Ext.define('CustomApp', {
     ],
     
     launch: function() {
-        var me = this;
         this.logger.log("Launched with context: ",this.getContext());
         
         this.time_store = Ext.create('Rally.data.custom.Store',{
@@ -41,12 +40,18 @@ Ext.define('CustomApp', {
             }]
         });
         
-        this._getTeamMembers(this.getContext().getProject().ObjectID, this).then({
+        this._getTeamMembers(this.getContext().getProject().ObjectID).then({
+            scope: this,
             success: function(records){
-                me.team_members = records;
-                me._addDateSelectors();
+                this.team_members = records;
+                this._addDateSelectors();
             }
         });
+        
+        if ( this._isAbleToDownloadFiles() ) {
+            this._addDownloadButton();
+        }
+        
     },
     _addDateSelectors: function() {
         var start_selector = this.down('#date_selector_box').add({
@@ -96,14 +101,17 @@ Ext.define('CustomApp', {
             itemId: 'export_button',
             text:'Export to CSV',
             scope: this,
+            disabled: true,
             handler: function() {
                 this._makeCSV();
             }
         });
         
     },
-    _getTeamMembers: function(project_oid,me) {
+    _getTeamMembers: function(project_oid) {
         var deferred = Ext.create('Deft.Deferred');
+        this.logger.log("_getTeamMembers");
+        this.setLoading("Getting Team Members...");
         Ext.create('Rally.data.wsapi.Store',{
             model:'Project',
             filters: [{ property:'ObjectID', value: project_oid }],
@@ -114,17 +122,17 @@ Ext.define('CustomApp', {
                 load: function(store,records){
                     this.time_store.removeAll();
                     Ext.Array.each(records, function(project){
-                        var find_all_users = false;
+                        this.find_all_users = false;
                         
                         if ( project.get('Children').Count > 0 ) {
-                            find_all_users = true;
+                            this.find_all_users = true;
                         }
                         
-                        if ( Ext.Array.indexOf(me.projects_to_consider_parents, project.get("Name")) > -1 ) {
-                            find_all_users = true;
+                        if ( Ext.Array.indexOf(this.projects_to_consider_parents, project.get("Name")) > -1 ) {
+                            this.find_all_users = true;
                         }
                         
-                        if ( find_all_users ) {
+                        if ( this.find_all_users ) {
                             // get all users
                             Ext.create('Rally.data.wsapi.Store',{
                                 model:'User',
@@ -134,7 +142,7 @@ Ext.define('CustomApp', {
                                 limit: 'Infinity',
                                 fetch: ['DisplayName','UserName','ObjectID','Category','Company','Department','ResourcePool'],
                                 listeners: {
-                                    scope: me,
+                                    scope: this,
                                     load: function(store,users){
                                         deferred.resolve(users);
                                     }
@@ -150,12 +158,11 @@ Ext.define('CustomApp', {
                                 }
                             });
                         }
-                    });
+                    },this);
                 }
             }
         });
         
-        this._makeGrid();
         return deferred.promise;
     },
     _getTimeRange: function() {
@@ -170,7 +177,7 @@ Ext.define('CustomApp', {
         var start = start_selector.getValue();
         var end = end_selector.getValue();
         
-        this.logger.log(start,end);
+        this.logger.log("Start/End",start,end);
         
         if ( ! start || ! end ) {
             return [];
@@ -194,15 +201,20 @@ Ext.define('CustomApp', {
     },
     _getTimesheets: function() {
         this.logger.log("_getTimesheets");
-        this.down('#sparkler').setLoading("Loading Timesheets...");
-        this.down('#export_button').setDisabled(true);
+        this.setLoading("Loading Timesheets...");
+        this.down('#grid_box').removeAll();
+        
+        if ( this.down('#export_button') ) {
+            this.down('#export_button').setDisabled(true);
+        }
         
         var start_end = this._getTimeRange();
         
         this.time_store.clearFilter();
         this.time_store.removeAll();
-                
+        
         var number_of_team_members = this.team_members.length;
+        this.logger.log("There are " + number_of_team_members + " team members");
         
         var promises = [];
         for ( var w=0;w<start_end.length;w++ ) {
@@ -214,14 +226,17 @@ Ext.define('CustomApp', {
         Deft.Promise.all(promises).then({
             scope: this,
             success: function() {
-                this.down('#grid_box').doLayout();
+                this.setLoading("Redrawing...");
                 
-                this.down('#sparkler').setLoading(false);
+                this._makeGrid();
+                
+                this.setLoading(false);
                 this.down('#export_button').setDisabled(false);
                 this.logger.log("Ready");
             },
             failure: function(message){
                 alert("Problem loading timesheets: " + message);
+                this.setLoading(false);
             }
         });
     },
@@ -247,20 +262,24 @@ Ext.define('CustomApp', {
             listeners: {
                 scope: this,
                 load: function(store,records){
-                    //this.logger.log(team_member.get('UserName'),records);
                     var by_entry = {}; // key is object id for line of time
-                    Ext.Array.each(records,function(record){
-                        var time_oid = record.get('TimeEntryItem').ObjectID;
+                    if ( ! records || records.length === 0 ) {
+                        this.logger.log(" This user does not have any time in ", start_date ,": ", team_member.get('_refObjectName'));
+                    } else {
+                        Ext.Array.each(records,function(record){
+                            var time_oid = record.get('TimeEntryItem').ObjectID;
+                            
+                            if ( !by_entry[time_oid] ) {
+                                by_entry[time_oid] = { tie: record, team_member: team_member, total: 0 };
+                            }
+                            var value = record.get('Hours') || 0;
+                            var hours = by_entry[time_oid].total;
+                            hours += value;
+                            by_entry[time_oid].total = hours;
+                        });
                         
-                        if ( !by_entry[time_oid] ) {
-                            by_entry[time_oid] = { tie: record, team_member: team_member, total: 0 };
-                        }
-                        var value = record.get('Hours') || 0;
-                        var hours = by_entry[time_oid].total;
-                        hours += value;
-                        by_entry[time_oid].total = hours;
-                    });
-                    this._addTimeToStore(by_entry);
+                        this._addTimeToStore(by_entry);
+                    }
                     deferred.resolve(by_entry);
                 }
             }
@@ -355,14 +374,15 @@ Ext.define('CustomApp', {
             
         });
     },
-    _makeGrid: function() {        
+    _makeGrid: function() {
+        this.logger.log("_makeGrid with ", this.time_store.getCount(), " records");
         this.grid = this.down('#grid_box').add({
             xtype:'rallygrid',
             store: this.time_store,
             enableEditing: false,
             sortableColumns: false,
             showPagingToolbar: false,
-            suspendLayout: true,
+            suspendLayout: false,
             columnCfgs:[ 
                 { text:'Work Item Type',dataIndex:'WorkItemType'},
                 { text:'Parent Project' ,dataIndex:'WorkItemSet'},
@@ -381,9 +401,6 @@ Ext.define('CustomApp', {
             ]
         });
         
-        if ( this._isAbleToDownloadFiles() ) {
-            this._addDownloadButton();
-        }
     },
     _makeCSV: function() {
         var store = this.grid.getStore();
@@ -395,8 +412,8 @@ Ext.define('CustomApp', {
             column_index_array.push(column.dataIndex);
         });
         var csv=[];
-        csv.push(csv_header_array.join(','));
         var store_count = store.getCount();
+        csv.push(csv_header_array.join(',') + ", find all:" + this.find_all_users + ", " + this.getContext().getProject().Name + ", count: " + store_count);
         for ( var i=0;i<store_count;i++ ) {
             var record = store.getAt(i);
             var row_array = [];
