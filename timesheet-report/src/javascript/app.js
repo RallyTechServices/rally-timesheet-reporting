@@ -218,9 +218,13 @@ Ext.define('CustomApp', {
         
         var promises = [];
         for ( var w=0;w<start_end.length;w++ ) {
-            for ( var i=0;i<number_of_team_members;i++ ) {
-                var team_member = this.team_members[i];
-                promises.push(this._getTimesheetForTeamMember(start_end[w],team_member));
+            if (this.find_all_users) {
+                promises.push(this._getTimesheetsForAll(start_end[w],this.team_members));
+            } else {
+                for ( var i=0;i<number_of_team_members;i++ ) {
+                    var team_member = this.team_members[i];
+                    promises.push(this._getTimesheetForTeamMember(start_end[w],team_member,0));
+                }
             }
         }
         Deft.Promise.all(promises).then({
@@ -240,7 +244,64 @@ Ext.define('CustomApp', {
             }
         });
     },
-    _getTimesheetForTeamMember: function(week_start,team_member) {
+    _getTimesheetsForAll: function(week_start,team_members) {
+        var deferred = Ext.create('Deft.Deferred');
+        var start_date = Rally.util.DateTime.toIsoString(week_start,true).replace(/T.*$/,"T00:00:00.000Z");
+        
+        Ext.create('Rally.data.wsapi.Store',{
+            autoLoad: true,
+            model:'TimeEntryValue',
+            limit:'Infinity',
+            fetch:['TimeEntryItem','Hours','ObjectID',
+                'WorkProductDisplayString','WorkProduct',
+                'TaskDisplayString','Task','Project',
+                'Name','Expense','WeekStartDate','User',
+                'Projects','FormattedID','Requirement'],
+            filters: [
+                {property:'TimeEntryItem.WeekStartDate',value:start_date}
+            ],
+            listeners: {
+                scope: this,
+                load: function(store,records,successful, eOpts){
+                    var by_user = {}; // key is object id for user
+                    this.logger.log("Found ", records.length, " timesheet entries");
+                    
+                    // put team members into a hash for easy comparison later
+                    var team_by_oid = {};
+                    Ext.Array.each(team_members,function(team_member){
+                        team_by_oid[team_member.get('ObjectID')] = team_member;
+                    });
+                    
+                    Ext.Array.each(records,function(record){
+                        var time_oid = record.get('TimeEntryItem').ObjectID;
+                        var user_oid = record.get('TimeEntryItem').User.ObjectID;
+
+                        if ( team_by_oid[user_oid] ) {
+                            if ( !by_user[user_oid] ) {
+                                by_user[user_oid] = {}; // key is object id for team_member
+                            }
+                            
+                            if ( !by_user[user_oid][time_oid] ) {
+                                by_user[user_oid][time_oid] = { tie: record, team_member: team_by_oid[user_oid], total: 0 };
+                            }
+                            var value = record.get('Hours') || 0;
+                            var hours = by_user[user_oid][time_oid].total;
+                            hours += value;
+                            by_user[user_oid][time_oid].total = hours;
+                        }
+                    });
+                    
+                    Ext.Object.each(by_user,function(user,user_time){
+                        this._addTimeToStore(user_time);
+                    },this);
+                    
+                    deferred.resolve();
+                }
+            }
+        });
+        return deferred;
+    },
+    _getTimesheetForTeamMember: function(week_start,team_member,attempt_count) {
         //this.logger.log("_getTimesheetForTeamMember",week_start,team_member);
         var deferred = Ext.create('Deft.Deferred');
         // force to midnight even in UTC
@@ -261,10 +322,27 @@ Ext.define('CustomApp', {
             ],
             listeners: {
                 scope: this,
-                load: function(store,records){
+                load: function(store,records,successful, eOpts){
                     var by_entry = {}; // key is object id for line of time
+                    
                     if ( ! records || records.length === 0 ) {
-                        this.logger.log(" This user does not have any time in ", start_date ,": ", team_member.get('_refObjectName'));
+                        if ( !successful && attempt_count < 2 ) {
+                            this.logger.log("  Retrying...", team_member.get('_refObjectName'), start_date, attempt_count);
+
+                            var count = attempt_count || 0;
+                            count = count + 1;
+                            this._getTimesheetForTeamMember(week_start,team_member,count).then({
+                                scope: this,
+                                success: function(entry) {
+                                    this.logger.log( "  Found ", entry, " after ", count , " tries");
+                                    deferred.resolve(entry);
+                                },
+                                failure: function(msg){
+                                    this.logger.log("  Failed after " + count + " tries"  + " (" + team_member.get('_refObjectName') + ")" );
+                                    deferred.reject("Failed after " + count + " tries. " + msg + " (" + team_member.get('_refObjectName') + ")" );
+                                }
+                            });
+                        }
                     } else {
                         Ext.Array.each(records,function(record){
                             var time_oid = record.get('TimeEntryItem').ObjectID;
@@ -280,7 +358,9 @@ Ext.define('CustomApp', {
                         
                         this._addTimeToStore(by_entry);
                     }
-                    deferred.resolve(by_entry);
+                    if ( successful ) {
+                        deferred.resolve(by_entry);
+                    }
                 }
             }
         });
@@ -413,7 +493,7 @@ Ext.define('CustomApp', {
         });
         var csv=[];
         var store_count = store.getCount();
-        csv.push(csv_header_array.join(',') + ", find all:" + this.find_all_users + ", " + this.getContext().getProject().Name + ", count: " + store_count);
+        csv.push(csv_header_array.join(','));
         for ( var i=0;i<store_count;i++ ) {
             var record = store.getAt(i);
             var row_array = [];
