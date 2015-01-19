@@ -4,9 +4,11 @@ Ext.define('CustomApp', {
     projects_to_consider_parents: ['Administrative Time','Support'],
     logger: new Rally.technicalservices.Logger(),
     defaults: { padding: 5, margin: 5 },
+    low_level_pi: 'Feature', // 'Projects' for this customer
     items: [
         {xtype:'container', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }, items:[
             {xtype:'container',itemId:'date_selector_box'}, 
+            {xtype:'container',itemId:'type_selector_box'},
             {xtype:'container',itemId:'save_button_box'},
             {xtype:'container',itemId:'sparkler',html:''}
         ]},
@@ -17,6 +19,15 @@ Ext.define('CustomApp', {
     
     launch: function() {
         this.logger.log("Launched with context: ",this.getContext());
+        
+        if (this.isExternal()){
+            this.showSettings(this.config);
+        } else {
+            this.onSettingsUpdate(this.getSettings());  
+        }
+    },
+    _setUpAndGo: function() {
+        this.restrict_to_current_user = this.getSetting('restrict_to_current_user');
         
         this.time_store = Ext.create('Rally.data.custom.Store',{
             pageSize: 'Infinity',
@@ -45,6 +56,9 @@ Ext.define('CustomApp', {
             success: function(records){
                 this.team_members = records;
                 this._addDateSelectors();
+                if (this.restrict_to_current_user) {
+                    this._addTypeSelector();
+                }
             }
         });
         
@@ -52,6 +66,24 @@ Ext.define('CustomApp', {
             this._addDownloadButton();
         }
         
+    },
+    _addTypeSelector: function() {
+        var store = Ext.create('Ext.data.Store',{
+            fields: ['display', 'value'],
+            data : [
+                {"display":"All", "value":"ALL"},
+                {"display":"Projects", "value":"Projects"}
+            ]
+        });
+        this.down('#type_selector_box').add({
+            xtype: 'combobox',
+            fieldLabel: 'Choose State',
+            store: store,
+            queryMode: 'local',
+            displayField: 'display',
+            valueField: 'value',
+            value: 'All'
+        });
     },
     _addDateSelectors: function() {
         var start_selector = this.down('#date_selector_box').add({
@@ -132,7 +164,24 @@ Ext.define('CustomApp', {
                             this.find_all_users = true;
                         }
                         
-                        if ( this.find_all_users ) {
+                        if ( this.restrict_to_current_user ) {
+                            var current_user = this.getContext().getUser();
+                            
+                            Ext.create('Rally.data.wsapi.Store',{
+                                model:'User',
+                                filters: [{ property: 'ObjectID', value: current_user.ObjectID }],
+                                sorters:[{property:'UserName'}],
+                                autoLoad: true,
+                                fetch: ['DisplayName','UserName','ObjectID','Category','Company','Department','ResourcePool'],
+                                listeners: {
+                                    scope: this,
+                                    load: function(store,users){
+                                        deferred.resolve(users);
+                                    }
+                                }
+
+                            });
+                        } else if ( this.find_all_users ) {
                             // get all users
                             Ext.create('Rally.data.wsapi.Store',{
                                 model:'User',
@@ -256,7 +305,7 @@ Ext.define('CustomApp', {
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
                 'Name','Expense','WeekStartDate','User',
-                'Projects','FormattedID','Requirement'],
+                this.low_level_pi,'FormattedID','Requirement'],
             filters: [
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
             ],
@@ -315,7 +364,7 @@ Ext.define('CustomApp', {
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
                 'Name','Expense','WeekStartDate',
-                'Projects','FormattedID','Requirement'],
+                this.low_level_pi,'FormattedID','Requirement'],
             filters: [
                 {property:'TimeEntryItem.User.ObjectID',value:team_member.get('ObjectID')},
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
@@ -393,8 +442,8 @@ Ext.define('CustomApp', {
             }
             
             var projects = null;
-            if ( wp && wp.Projects ) {
-                projects = wp.Projects;
+            if ( wp && wp[me.low_level_pi] ) {
+                projects = wp[me.low_level_pi];
             }
             var parent_display = null;
             if ( projects ) {
@@ -521,5 +570,60 @@ Ext.define('CustomApp', {
             return false;
         }
         return true;
+    },
+    /********************************************
+    /* Overrides for App class
+    /*
+    /********************************************/
+    //getSettingsFields:  Override for App    
+    getSettingsFields: function() {
+        var me = this;
+        
+        return [{
+            name: 'restrict_to_current_user',
+            xtype: 'rallycheckboxfield',
+            fieldLabel: 'Current User Only:',
+            width: 300,
+            labelWidth: 150
+        }];
+    },
+    //showSettings:  Override to add showing when external + scrolling
+    showSettings: function(options) {
+        this.logger.log("showSettings",options);
+        this._appSettings = Ext.create('Rally.app.AppSettings', Ext.apply({
+            fields: this.getSettingsFields(),
+            settings: this.getSettings(),
+            defaultSettings: this.getDefaultSettings(),
+            context: this.getContext(),
+            settingsScope: this.settingsScope
+        }, options));
+
+        this._appSettings.on('cancel', this._hideSettings, this);
+        this._appSettings.on('save', this._onSettingsSaved, this);
+        
+        if (this.isExternal()){
+            if (this.down('#grid_box').getComponent(this._appSettings.id)==undefined){
+                this.down('#grid_box').add(this._appSettings);
+            }
+        } else {
+            this.hide();
+            this.up().add(this._appSettings);
+        }
+        return this._appSettings;
+    },
+    _onSettingsSaved: function(settings){
+        this.logger.log('_onSettingsSaved',settings);
+        Ext.apply(this.settings, settings);
+        this._hideSettings();
+        this.onSettingsUpdate(settings);
+    },
+    //onSettingsUpdate:  Override
+    onSettingsUpdate: function (settings){
+        //Build and save column settings...this means that we need to get the display names and multi-list
+        this.logger.log('onSettingsUpdate',settings);        
+        this._setUpAndGo();
+    },
+    isExternal: function(){
+      return typeof(this.getAppId()) == 'undefined';
     }
 });
