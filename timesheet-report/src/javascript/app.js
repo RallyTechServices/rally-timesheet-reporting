@@ -74,7 +74,8 @@ Ext.define('CustomApp', {
                 {"display":"All", "value":"ALL"},
                 {"display":"Projects", "value":"PROJECTS"},
                 {"display":"Support", "value":"SUPPORT"},
-                {"display":"Admin", "value":"ADMIN"}
+                {"display":"Admin", "value":"ADMIN"},
+                {"display":"Paid Time Off", "value":"PTO"}
             ]
         });
         this.down('#type_selector_box').add({
@@ -154,6 +155,12 @@ Ext.define('CustomApp', {
                 case "ADMIN":
                     store.filter([
                         {property: "WorkItemType", value: /Administrative/}
+                    ]);
+                    break;
+                case "PTO":
+                    store.filter([
+                        {property: "WorkItemType", value: /Administrative/},
+                        {property: "WorkProduct", value: /PTO/}
                     ]);
                     break;
                 default:
