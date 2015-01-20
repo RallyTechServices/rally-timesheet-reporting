@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Report</title>
     <!--  (c) 2013,2014 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Mon Jan 19 2015 16:11:08 GMT-0800 (PST) -->
+    <!--  Build Date: Mon Jan 19 2015 16:14:01 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon Jan 19 2015 16:11:08 GMT-0800 (PST)";
-        var CHECKSUM = 74092592035;
+        var APP_BUILD_DATE = "Mon Jan 19 2015 16:14:01 GMT-0800 (PST)";
+        var CHECKSUM = 74818672712;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -595,7 +595,8 @@ Ext.define('CustomApp', {
             data : [
                 {"display":"All", "value":"ALL"},
                 {"display":"Projects", "value":"PROJECTS"},
-                {"display":"Support", "value":"SUPPORT"}
+                {"display":"Support", "value":"SUPPORT"},
+                {"display":"Admin", "value":"ADMIN"}
             ]
         });
         this.down('#type_selector_box').add({
@@ -670,6 +671,11 @@ Ext.define('CustomApp', {
                 case "SUPPORT":
                     store.filter([
                         {property: "WorkItemType", value: /Support/}
+                    ]);
+                    break;
+                case "ADMIN":
+                    store.filter([
+                        {property: "WorkItemType", value: /Administrative/}
                     ]);
                     break;
                 default:

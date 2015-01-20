@@ -73,7 +73,8 @@ Ext.define('CustomApp', {
             data : [
                 {"display":"All", "value":"ALL"},
                 {"display":"Projects", "value":"PROJECTS"},
-                {"display":"Support", "value":"SUPPORT"}
+                {"display":"Support", "value":"SUPPORT"},
+                {"display":"Admin", "value":"ADMIN"}
             ]
         });
         this.down('#type_selector_box').add({
@@ -148,6 +149,11 @@ Ext.define('CustomApp', {
                 case "SUPPORT":
                     store.filter([
                         {property: "WorkItemType", value: /Support/}
+                    ]);
+                    break;
+                case "ADMIN":
+                    store.filter([
+                        {property: "WorkItemType", value: /Administrative/}
                     ]);
                     break;
                 default:
