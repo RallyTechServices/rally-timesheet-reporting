@@ -72,7 +72,7 @@ Ext.define('CustomApp', {
             fields: ['display', 'value'],
             data : [
                 {"display":"All", "value":"ALL"},
-                {"display":"Projects", "value":"Projects"}
+                {"display":"Projects", "value":"PROJECTS"}
             ]
         });
         this.down('#type_selector_box').add({
@@ -82,7 +82,13 @@ Ext.define('CustomApp', {
             queryMode: 'local',
             displayField: 'display',
             valueField: 'value',
-            value: 'All'
+            value: 'All',
+            listeners: {
+                scope: this,
+                select: function(combo) {
+                    this._applyFilter(combo.getValue());
+                }
+            }
         });
     },
     _addDateSelectors: function() {
@@ -122,6 +128,26 @@ Ext.define('CustomApp', {
         });
         start_selector.setValue(new Date());
         end_selector.setValue(new Date());
+    },
+    _applyFilter:function(selection){
+        this.logger.log("_applyFilter:",selection);
+        if (this.time_store) {
+            var store = this.time_store;
+            store.clearFilter(false);
+            
+            switch(selection) {
+                case "ALL":
+                    
+                    break;
+                case "PROJECTS":
+                    store.filter([
+                        {property: "WorkItemType", value: /Project/}
+                    ]);
+                    break;
+                default:
+                    break;
+            }
+        }
     },
     _getBeginningOfWeek: function(js_date){
         var start_of_week_here = Ext.Date.add(js_date, Ext.Date.DAY, -1 * js_date.getDay());

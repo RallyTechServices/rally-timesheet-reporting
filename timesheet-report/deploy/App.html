@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Report</title>
     <!--  (c) 2013,2014 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Mon Jan 19 2015 15:47:20 GMT-0800 (PST) -->
+    <!--  Build Date: Mon Jan 19 2015 16:04:13 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon Jan 19 2015 15:47:20 GMT-0800 (PST)";
-        var CHECKSUM = 71080123577;
+        var APP_BUILD_DATE = "Mon Jan 19 2015 16:04:13 GMT-0800 (PST)";
+        var CHECKSUM = 73372366840;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -594,7 +594,7 @@ Ext.define('CustomApp', {
             fields: ['display', 'value'],
             data : [
                 {"display":"All", "value":"ALL"},
-                {"display":"Projects", "value":"Projects"}
+                {"display":"Projects", "value":"PROJECTS"}
             ]
         });
         this.down('#type_selector_box').add({
@@ -604,7 +604,13 @@ Ext.define('CustomApp', {
             queryMode: 'local',
             displayField: 'display',
             valueField: 'value',
-            value: 'All'
+            value: 'All',
+            listeners: {
+                scope: this,
+                select: function(combo) {
+                    this._applyFilter(combo.getValue());
+                }
+            }
         });
     },
     _addDateSelectors: function() {
@@ -644,6 +650,26 @@ Ext.define('CustomApp', {
         });
         start_selector.setValue(new Date());
         end_selector.setValue(new Date());
+    },
+    _applyFilter:function(selection){
+        this.logger.log("_applyFilter:",selection);
+        if (this.time_store) {
+            var store = this.time_store;
+            store.clearFilter(false);
+            
+            switch(selection) {
+                case "ALL":
+                    
+                    break;
+                case "PROJECTS":
+                    store.filter([
+                        {property: "WorkItemType", value: /Project/}
+                    ]);
+                    break;
+                default:
+                    break;
+            }
+        }
     },
     _getBeginningOfWeek: function(js_date){
         var start_of_week_here = Ext.Date.add(js_date, Ext.Date.DAY, -1 * js_date.getDay());
