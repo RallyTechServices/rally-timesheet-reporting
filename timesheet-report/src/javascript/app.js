@@ -72,7 +72,8 @@ Ext.define('CustomApp', {
             fields: ['display', 'value'],
             data : [
                 {"display":"All", "value":"ALL"},
-                {"display":"Projects", "value":"PROJECTS"}
+                {"display":"Projects", "value":"PROJECTS"},
+                {"display":"Support", "value":"SUPPORT"}
             ]
         });
         this.down('#type_selector_box').add({
@@ -142,6 +143,11 @@ Ext.define('CustomApp', {
                 case "PROJECTS":
                     store.filter([
                         {property: "WorkItemType", value: /Project/}
+                    ]);
+                    break;
+                case "SUPPORT":
+                    store.filter([
+                        {property: "WorkItemType", value: /Support/}
                     ]);
                     break;
                 default:
