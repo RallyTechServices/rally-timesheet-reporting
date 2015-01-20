@@ -80,6 +80,7 @@ Ext.define('CustomApp', {
         });
         this.down('#type_selector_box').add({
             xtype: 'combobox',
+            itemId: 'type_selector',
             fieldLabel: 'Choose State',
             store: store,
             queryMode: 'local',
@@ -327,8 +328,8 @@ Ext.define('CustomApp', {
                 this.setLoading("Redrawing...");
                 
                 this._makeGrid();
-                
                 this.setLoading(false);
+
                 this.down('#export_button').setDisabled(false);
                 this.logger.log("Ready");
             },
@@ -574,7 +575,9 @@ Ext.define('CustomApp', {
                 { text:"Warnings",dataIndex:'Warnings' }
             ]
         });
-        
+        if ( this.down('#type_selector') ) {
+            this._applyFilter(this.down('#type_selector').getValue());
+        }
     },
     _makeCSV: function() {
         var store = this.grid.getStore();

@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Report</title>
     <!--  (c) 2013,2014 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Mon Jan 19 2015 16:16:09 GMT-0800 (PST) -->
+    <!--  Build Date: Tue Jan 20 2015 08:36:31 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon Jan 19 2015 16:16:09 GMT-0800 (PST)";
-        var CHECKSUM = 75769328069;
+        var APP_BUILD_DATE = "Tue Jan 20 2015 08:36:31 GMT-0800 (PST)";
+        var CHECKSUM = 76288535902;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -602,6 +602,7 @@ Ext.define('CustomApp', {
         });
         this.down('#type_selector_box').add({
             xtype: 'combobox',
+            itemId: 'type_selector',
             fieldLabel: 'Choose State',
             store: store,
             queryMode: 'local',
@@ -849,8 +850,8 @@ Ext.define('CustomApp', {
                 this.setLoading("Redrawing...");
                 
                 this._makeGrid();
-                
                 this.setLoading(false);
+
                 this.down('#export_button').setDisabled(false);
                 this.logger.log("Ready");
             },
@@ -1096,7 +1097,9 @@ Ext.define('CustomApp', {
                 { text:"Warnings",dataIndex:'Warnings' }
             ]
         });
-        
+        if ( this.down('#type_selector') ) {
+            this._applyFilter(this.down('#type_selector').getValue());
+        }
     },
     _makeCSV: function() {
         var store = this.grid.getStore();
