@@ -3,11 +3,11 @@
 <head>
     <title>Timesheet Report</title>
     <!--  (c) 2013,2014 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Tue Jan 20 2015 08:36:31 GMT-0800 (PST) -->
+    <!--  Build Date: Tue Mar 17 2015 13:22:09 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Jan 20 2015 08:36:31 GMT-0800 (PST)";
-        var CHECKSUM = 76288535902;
+        var APP_BUILD_DATE = "Tue Mar 17 2015 13:22:09 GMT-0700 (PDT)";
+        var CHECKSUM = 76668900826;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -869,6 +869,9 @@ Ext.define('CustomApp', {
             autoLoad: true,
             model:'TimeEntryValue',
             limit:'Infinity',
+            context: {
+                project: null
+            },
             fetch:['TimeEntryItem','Hours','ObjectID',
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
@@ -928,6 +931,9 @@ Ext.define('CustomApp', {
             autoLoad: true,
             model:'TimeEntryValue',
             limit:'Infinity',
+            context: {
+                project: null
+            },
             fetch:['TimeEntryItem','Hours','ObjectID',
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',

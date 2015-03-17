@@ -286,13 +286,16 @@ Ext.define('CustomApp', {
             ],
             fetch: ['User','ObjectID','Hours','TimeEntryItem'],
             limit:'Infinity',
+            context: {
+                project: null
+            },
             listeners: {
                 scope: this,
                 load: function(store,records){
                     var me = this;
                     var members_by_oid = {};
                     var number_of_team_members = this.team_store.getCount();
-                    me.logger.log(" -- back from  ",start_date, " with ", records.length, "/", number_of_team_members);
+                    me.logger.log(" -- back from  ",start_date, " with ", records.length, " entries/", number_of_team_members, " people");
                     
                     var lines = [];
                     for ( var i=0;i<number_of_team_members;i++ ) {
@@ -309,14 +312,21 @@ Ext.define('CustomApp', {
                         members_by_oid[team_member.get("ObjectID")] = line_item;
                     }
                     me.logger.log(" -- adding hrs ", start_date );
+                    var counter = 0;
                     Ext.Array.each(records,function(record){
+                        counter++;
+                        console.log(counter);
+                        var record_user = record.get('TimeEntryItem').User;
+                        var user_oid = record_user.ObjectID;
+                        
                         var value = record.get('Hours') || 0;
                         if ( isNaN(value) ) { value = 0; }
-                        var user = members_by_oid[record.get('TimeEntryItem').User.ObjectID];
+                        var user = members_by_oid[user_oid];
+
                         if ( user ) {
                             var cumulative_value = user.TotalHours;
                             if ( isNaN(cumulative_value) ) { cumulative_value = 0; }
-                            members_by_oid[record.get('TimeEntryItem').User.ObjectID].TotalHours = cumulative_value + value;
+                            members_by_oid[user_oid].TotalHours = cumulative_value + value;
                         }
                     });
                     

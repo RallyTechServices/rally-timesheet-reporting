@@ -347,6 +347,9 @@ Ext.define('CustomApp', {
             autoLoad: true,
             model:'TimeEntryValue',
             limit:'Infinity',
+            context: {
+                project: null
+            },
             fetch:['TimeEntryItem','Hours','ObjectID',
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
@@ -406,6 +409,9 @@ Ext.define('CustomApp', {
             autoLoad: true,
             model:'TimeEntryValue',
             limit:'Infinity',
+            context: {
+                project: null
+            },
             fetch:['TimeEntryItem','Hours','ObjectID',
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
