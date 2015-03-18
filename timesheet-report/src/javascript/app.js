@@ -4,7 +4,7 @@ Ext.define('CustomApp', {
     projects_to_consider_parents: ['Administrative Time','Support'],
     logger: new Rally.technicalservices.Logger(),
     defaults: { padding: 5, margin: 5 },
-    low_level_pi: 'Feature', // 'Projects' for this customer
+    low_level_pi: 'Projects', // 'Projects' for this customer
     items: [
         {xtype:'container', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }, items:[
             {xtype:'container',itemId:'date_selector_box'}, 
@@ -497,11 +497,14 @@ Ext.define('CustomApp', {
             if ( wp && wp[me.low_level_pi] ) {
                 projects = wp[me.low_level_pi];
             }
+            console.log(me.low_level_pi, wp);
+            
             var parent_display = null;
             if ( projects ) {
                 parent_display = projects.Name;
             }
             
+            console.log('pd:',parent_display);
             var week_start = new Date(record.get('TimeEntryItem').WeekStartDate);
             week_start = new Date( week_start.getTime() + ( week_start.getTimezoneOffset() * 60000 ) );
             var week_end = Rally.util.DateTime.add(week_start,'day',6);
