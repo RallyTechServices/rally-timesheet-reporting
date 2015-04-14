@@ -47,7 +47,8 @@ Ext.define('CustomApp', {
                 "Department":"",
                 "Company":"",
                 "ResourcePool":"",
-                "Warnings":""
+                "Warnings":"",
+                "ParentIO":""
             }]
         });
         
@@ -353,7 +354,7 @@ Ext.define('CustomApp', {
             fetch:['TimeEntryItem','Hours','ObjectID',
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
-                'Name','Expense','WeekStartDate','User',
+                'Name','Expense','WeekStartDate','User', 'c_IONumber',
                 this.low_level_pi,'FormattedID','Requirement'],
             filters: [
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
@@ -415,7 +416,7 @@ Ext.define('CustomApp', {
             fetch:['TimeEntryItem','Hours','ObjectID',
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
-                'Name','Expense','WeekStartDate',
+                'Name','Expense','WeekStartDate', 'c_IONumber',
                 this.low_level_pi,'FormattedID','Requirement'],
             filters: [
                 {property:'TimeEntryItem.User.ObjectID',value:team_member.get('ObjectID')},
@@ -497,19 +498,18 @@ Ext.define('CustomApp', {
             if ( wp && wp[me.low_level_pi] ) {
                 projects = wp[me.low_level_pi];
             }
-            console.log(me.low_level_pi, wp);
             
             var parent_display = null;
+            var parent_io = null;
             if ( projects ) {
                 parent_display = projects.Name;
+                parent_io = projects.c_IONumber;
             }
             
-            console.log('pd:',parent_display);
             var week_start = new Date(record.get('TimeEntryItem').WeekStartDate);
             week_start = new Date( week_start.getTime() + ( week_start.getTimezoneOffset() * 60000 ) );
             var week_end = Rally.util.DateTime.add(week_start,'day',6);
             var period = Ext.Date.format(week_start, 'm/d/y') + " - " + Rally.util.DateTime.format(week_end, 'm/d/y');
-            
             
             if ( project !== "Administrative Time" && project !== "Support" ) {
                 project = "Project";
@@ -553,7 +553,8 @@ Ext.define('CustomApp', {
                 'Department':team_member.get('Department'),
                 'Company':team_member.get('Company'),
                 'ResourcePool':team_member.get('ResourcePool'),
-                'Warnings':warning
+                'Warnings':warning,
+                'ParentIO': parent_io
             });
             
         });
@@ -570,6 +571,7 @@ Ext.define('CustomApp', {
             columnCfgs:[ 
                 { text:'Work Item Type',dataIndex:'WorkItemType'},
                 { text:'Parent Project' ,dataIndex:'WorkItemSet'},
+                { text: 'IO Number', dataIndex: 'ParentIO' },
                 { text:'Work Product', dataIndex:'WorkProduct'},
                 { text:'Work Item',     dataIndex:'WorkItem'},
                 { text:'Name',dataIndex:'DisplayName', flex: 1},
