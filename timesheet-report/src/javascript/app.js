@@ -48,7 +48,8 @@ Ext.define('CustomApp', {
                 "Company":"",
                 "ResourcePool":"",
                 "Warnings":"",
-                "ParentIO":""
+                "ParentIO":"",
+                "RallyProject":""
             }]
         });
         
@@ -480,6 +481,8 @@ Ext.define('CustomApp', {
             var task = record.get('TimeEntryItem').Task;
             var task_display = record.get('TimeEntryItem').TaskDisplayString;
             var project = record.get('TimeEntryItem').Project.Name;
+            var rally_project = project;
+            console.log(project,record.get('TimeEntryItem'));
             
             // when the time is against a defect, it might belong to a story
             // and should be treated like a task
@@ -510,6 +513,7 @@ Ext.define('CustomApp', {
             week_start = new Date( week_start.getTime() + ( week_start.getTimezoneOffset() * 60000 ) );
             var week_end = Rally.util.DateTime.add(week_start,'day',6);
             var period = Ext.Date.format(week_start, 'm/d/y') + " - " + Rally.util.DateTime.format(week_end, 'm/d/y');
+            
             
             if ( project !== "Administrative Time" && project !== "Support" ) {
                 project = "Project";
@@ -554,7 +558,8 @@ Ext.define('CustomApp', {
                 'Company':team_member.get('Company'),
                 'ResourcePool':team_member.get('ResourcePool'),
                 'Warnings':warning,
-                'ParentIO': parent_io
+                'ParentIO': parent_io,
+                'RallyProject':rally_project
             });
             
         });
@@ -573,6 +578,7 @@ Ext.define('CustomApp', {
                 { text:'Parent Project' ,dataIndex:'WorkItemSet'},
                 { text: 'IO Number', dataIndex: 'ParentIO' },
                 { text:'Work Product', dataIndex:'WorkProduct'},
+                { text:'Rally Project', dataIndex: 'RallyProject'},
                 { text:'Work Item',     dataIndex:'WorkItem'},
                 { text:'Name',dataIndex:'DisplayName', flex: 1},
                 /*{ text:'User Name',dataIndex:'UserName',flex:1},*/
