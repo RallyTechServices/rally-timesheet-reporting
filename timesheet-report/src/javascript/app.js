@@ -5,16 +5,17 @@ Ext.define('CustomApp', {
     logger: new Rally.technicalservices.Logger(),
     defaults: { padding: 5, margin: 5 },
     low_level_pi: 'Projects', // 'Projects' for this customer
+    layout: 'border',
+    
     items: [
-        {xtype:'container', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }, items:[
+        {xtype:'container', region: 'north', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }, items:[
             {xtype:'container',itemId:'date_selector_box'}, 
             {xtype:'container',itemId:'type_selector_box'},
             {xtype:'container',itemId:'save_button_box'},
             {xtype:'container',itemId:'sparkler',html:''}
         ]},
-        {xtype:'container',itemId:'select_checks_box', defaults: { margin: 5, padding: 5 }, layout: { type: 'hbox' }},
-        {xtype:'container',itemId:'grid_box'},
-        {xtype:'tsinfolink'}
+        {xtype:'container',itemId:'grid_box', region: 'center', layout:'fit'},
+        {xtype:'tsinfolink', region: 'south'}
     ],
     
     launch: function() {
@@ -357,7 +358,7 @@ Ext.define('CustomApp', {
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
                 'Name','Expense','WeekStartDate','User', 'c_IONumber',
-                this.low_level_pi,'FormattedID','Requirement','Parent'],
+                this.low_level_pi,'FormattedID','Requirement','c_Initiative'],
             filters: [
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
             ],
@@ -419,7 +420,7 @@ Ext.define('CustomApp', {
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
                 'Name','Expense','WeekStartDate', 'c_IONumber',
-                this.low_level_pi,'FormattedID','Requirement','Parent'],
+                this.low_level_pi,'FormattedID','Requirement','c_Initiative'],
             filters: [
                 {property:'TimeEntryItem.User.ObjectID',value:team_member.get('ObjectID')},
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
@@ -500,13 +501,11 @@ Ext.define('CustomApp', {
             var projects = null;
             var initiative = null;
             
+            if ( wp && wp['c_Initiative'] ) {
+                initiative = wp['c_Initiative'];
+            }
             if ( wp && wp[me.low_level_pi] ) {
                 projects = wp[me.low_level_pi];
-                if ( projects.Parent ) {
-                    if ( projects.Parent && projects.Parent.Parent ) {
-                        initiative = projects.Parent.Parent;
-                    }
-                }
             }
             
             var parent_display = null;
@@ -585,10 +584,6 @@ Ext.define('CustomApp', {
                 { text:'Work Item Type',dataIndex:'WorkItemType'},
                 { text:'Parent Project' ,dataIndex:'WorkItemSet'},
                 { text: 'IO Number', dataIndex: 'ParentIO' },
-                { text:'Initiative', dataIndex:'Initiative' , renderer: function(v) { 
-                    if ( Ext.isEmpty(v) ) { return ""; }
-                    return v.FormattedID + ": " + v._refObjectName;
-                }},
                 { text:'Work Product', dataIndex:'WorkProduct'},
                 { text:'Rally Project', dataIndex: 'RallyProject'},
                 { text:'Work Item',     dataIndex:'WorkItem'},
@@ -600,7 +595,7 @@ Ext.define('CustomApp', {
                 { text:"Category",dataIndex:'Category'},
                 { text:"Department",dataIndex:'Department'},
                 { text:"Company",dataIndex:'Company'},
-                { text:"ResourcePool",dataIndex:'ResourcePool'},
+                { text:"Initiative",dataIndex:'Initiative'},
                 { text:"Warnings",dataIndex:'Warnings' }
             ]
         });
