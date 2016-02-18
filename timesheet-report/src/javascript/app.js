@@ -36,6 +36,7 @@ Ext.define('CustomApp', {
                 'WorkItemSet':'',
                 'WorkItem':'',
                 'DisplayName':'Loading',
+                'Initiative': '',
                 'WorkProduct':'',
                 'UserName':'',
                 'Period':'',
@@ -356,7 +357,7 @@ Ext.define('CustomApp', {
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
                 'Name','Expense','WeekStartDate','User', 'c_IONumber',
-                this.low_level_pi,'FormattedID','Requirement'],
+                this.low_level_pi,'FormattedID','Requirement','Parent'],
             filters: [
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
             ],
@@ -418,7 +419,7 @@ Ext.define('CustomApp', {
                 'WorkProductDisplayString','WorkProduct',
                 'TaskDisplayString','Task','Project',
                 'Name','Expense','WeekStartDate', 'c_IONumber',
-                this.low_level_pi,'FormattedID','Requirement'],
+                this.low_level_pi,'FormattedID','Requirement','Parent'],
             filters: [
                 {property:'TimeEntryItem.User.ObjectID',value:team_member.get('ObjectID')},
                 {property:'TimeEntryItem.WeekStartDate',value:start_date}
@@ -482,7 +483,6 @@ Ext.define('CustomApp', {
             var task_display = record.get('TimeEntryItem').TaskDisplayString;
             var project = record.get('TimeEntryItem').Project.Name;
             var rally_project = project;
-            console.log(project,record.get('TimeEntryItem'));
             
             // when the time is against a defect, it might belong to a story
             // and should be treated like a task
@@ -498,8 +498,15 @@ Ext.define('CustomApp', {
             }
             
             var projects = null;
+            var initiative = null;
+            
             if ( wp && wp[me.low_level_pi] ) {
                 projects = wp[me.low_level_pi];
+                if ( projects.Parent ) {
+                    if ( projects.Parent && projects.Parent.Parent ) {
+                        initiative = projects.Parent.Parent;
+                    }
+                }
             }
             
             var parent_display = null;
@@ -547,6 +554,7 @@ Ext.define('CustomApp', {
                 'WorkItemType':project,
                 'WorkItemSet':parent_display,
                 'WorkItem': task_display,
+                'Initiative': initiative,
                 'WorkProduct': wp_display,
                 'DisplayName':team_member.get('DisplayName'),
                 'UserName':team_member.get('UserName'),
@@ -577,6 +585,10 @@ Ext.define('CustomApp', {
                 { text:'Work Item Type',dataIndex:'WorkItemType'},
                 { text:'Parent Project' ,dataIndex:'WorkItemSet'},
                 { text: 'IO Number', dataIndex: 'ParentIO' },
+                { text:'Initiative', dataIndex:'Initiative' , renderer: function(v) { 
+                    if ( Ext.isEmpty(v) ) { return ""; }
+                    return v.FormattedID + ": " + v._refObjectName;
+                }},
                 { text:'Work Product', dataIndex:'WorkProduct'},
                 { text:'Rally Project', dataIndex: 'RallyProject'},
                 { text:'Work Item',     dataIndex:'WorkItem'},
